@@ -13,8 +13,9 @@ import pandas as pd
 import math
 from tqdm import tqdm
 import emcee
+import corner
 
-def select_data_from_runs( runs, nrun ,firstrun=0):
+def select_data_from_runs( runs, nrun, firstrun = 0 ):
     s2 = []
     cs1 = []
     cs2 = []
@@ -49,17 +50,18 @@ def select_data_from_runs( runs, nrun ,firstrun=0):
     print('Data saved in file',fname)
     return data
 
-def drift_velocity( data ):
+def drift_velocity( data, plot = False ):
     #cathode drift time
     drift_hist, drift_bin = np.histogram(data['drift_times'],bins=800, range=(400,800))
-    plt.figure(1)
-    plt.plot(drift_bin[1:],drift_hist)
-    plt.xlabel('drift time ($\mu$s)', ha='right', x=1)
-    plt.ylabel('events', ha='right', y=1)
     drift_max = drift_bin[int(drift_hist.argmax())]
-    plt.axvline(drift_max, c='red', linestyle=":",label=f'cathode drop-off: {drift_max:.1f} $\mu s$')
-    plt.legend()
-    plt.savefig("drift-time.png")
+    if plot:
+        plt.figure(1)
+        plt.plot(drift_bin[1:],drift_hist)
+        plt.xlabel('drift time ($\mu$s)', ha='right', x=1)
+        plt.ylabel('events', ha='right', y=1)
+        plt.axvline(drift_max, c='red', linestyle=":",label=f'cathode drop-off: {drift_max:.1f} $\mu s$')
+        plt.legend()
+        plt.savefig("drift-time.png")
     
     #area ratio
     area_ratio = np.zeros(len(data))
@@ -69,26 +71,28 @@ def drift_velocity( data ):
     area_ratio10 = np.log10(area_ratio)
     d_vs_a = Histdd(data['drift_times'], area_ratio10,
                     bins=(np.linspace(400, 800, 200), np.linspace(-2, 4, 100)))
-    plt.figure(2)
-    d_vs_a.plot(log_scale=True, cblabel='events')
-    plt.xlabel('drift time ($\mu$s)', ha='right', x=1)
-    plt.ylabel('log10(cS2/cS1)', ha='right', y=1)
-    plt.axvline(drift_max, c='red', linestyle=":",label=f'cathode drop-off {drift_max:.1f} $\mu s$')
-    plt.legend()
-    plt.savefig("dt-area_high.png")
+    if plot:
+        plt.figure(2)
+        d_vs_a.plot(log_scale=True, cblabel='events')
+        plt.xlabel('drift time ($\mu$s)', ha='right', x=1)
+        plt.ylabel('log10(cS2/cS1)', ha='right', y=1)
+        plt.axvline(drift_max, c='red', linestyle=":",label=f'cathode drop-off {drift_max:.1f} $\mu s$')
+        plt.legend()
+        plt.savefig("dt-area_high.png")
     
-    plt.figure(3)
     mh = Histdd(data['drift_times'], area_ratio10,
                 bins=(np.linspace(0, 7, 70), np.linspace(1, 3.5, 100)),
                 axis_names=['drift_time', 'area_ratio'])
-    mh.plot(log_scale=True, cblabel='Events / bin')
-    plt.xlabel("drift time ($\mu$s)", ha='right', x=1)
-    plt.ylabel("log10(cS2/cS1)", ha='right', y=1)
-    
     median = mh.percentile(50, axis='area_ratio')
-    median.plot(color='red',label='median')
-    plt.legend()
-    plt.savefig("dt-area_low.png")
+
+    if plot:
+        plt.figure(3)
+        mh.plot(log_scale=True, cblabel='Events / bin')
+        plt.xlabel("drift time ($\mu$s)", ha='right', x=1)
+        plt.ylabel("log10(cS2/cS1)", ha='right', y=1)
+        median.plot(color='red',label='median')
+        plt.legend()
+        plt.savefig("dt-area_low.png")
     
     #drift velocity
     cathode_dt = drift_max * units.us
@@ -144,36 +148,38 @@ def fit_diffusion(drift_times, s2_50, vd, outlier_cap=-15):
     samples = sampler.chain[:, 50:, :].reshape((-1, n_dim))
     return samples
 
-def diffusion_constant( data, s2_bounds, aft_bounds, fit_range, vd):
+def diffusion_constant( data, s2_bounds, aft_bounds, fit_range, vd, plot = False ):
+    # S2_area vs S2_area_fraction_top
     s2_top2 = Histdd(data['s2'], data['s2_aft'],bins=(np.logspace(2, 6, 50), np.linspace(0.4, 0.8, 50)))
-    s2_top2.plot(log_scale=True)
+    if plot:
+        plt.figure(1)
+        s2_top2.plot(log_scale=True)
+        plt.gca().add_patch(matplotlib.patches.Rectangle(
+            (s2_bounds[0], aft_bounds[0]), s2_bounds[1] - s2_bounds[0],
+            aft_bounds[1] - aft_bounds[0],
+            edgecolor='red',facecolor='none'))
+        plt.xscale('log')
+        plt.xlabel('S2 (PE)', ha='right', x=1)
+        plt.ylabel('S2 area fraction top', ha='right', y=1)
+        plt.tight_layout()
     
-    plt.figure(1)
-    plt.gca().add_patch(matplotlib.patches.Rectangle(
-        (s2_bounds[0], aft_bounds[0]), s2_bounds[1] - s2_bounds[0],
-        aft_bounds[1] - aft_bounds[0],
-        edgecolor='red',facecolor='none'))
-    
-    plt.xscale('log')
-    plt.xlabel('S2 (PE)', ha='right', x=1)
-    plt.ylabel('S2 area fraction top', ha='right', y=1)
-    plt.tight_layout()
-    
-    plt.figure(2)
+    # drift_time vs S2_width
     width_hist = Histdd(data['drift_times'], data['s2_50'],
                         bins=(np.linspace(0, 800, 800), np.linspace(0, 3e3, 200)));
-    width_hist.plot(log_scale=True, cblabel='events')
-    plt.xlabel('drift time ($\mu$s)')
-    plt.ylabel('S2 width range 50% area (ns)')
+    if plot:
+        plt.figure(2)
+        width_hist.plot(log_scale=True, cblabel='events')
+        plt.xlabel('drift time ($\mu$s)')
+        plt.ylabel('S2 width range 50% area (ns)')
     
-    plt.figure(3)
+    # cut on S2_area and S2_area_fraction_top
     data_cut = data[(data['s2']>s2_bounds[0]) & (data['s2']<s2_bounds[1]) &
                     (data['s2_aft']>aft_bounds[0]) & (data['s2_aft']<aft_bounds[1])]
     width_hist_cut = Histdd(data_cut['drift_times'], data_cut['s2_50'],
                             bins=(np.linspace(0, 800, 800), np.linspace(0, 3e3, 200)));
-    
     data_fit = data_cut[(data_cut['drift_times']>fit_range[0]) &
                         (data_cut['drift_times']<fit_range[1])]
+    # calculate the diffusion constant
     samples = fit_diffusion(data_fit['drift_times'], data_fit['s2_50'], vd)
     fit_result = np.median(samples, axis=0)
     l, r = np.percentile(samples, 100 * stats.norm.cdf([-1, 1]), axis=0)
@@ -182,13 +188,18 @@ def diffusion_constant( data, s2_bounds, aft_bounds, fit_range, vd):
     D = fit_result[0] * (units.cm**2 / units.s)
     w0 = fit_result[1]
     diffusion_const = fit_result[0]
-    print(f'Diffusion constant = {fit_result[0]:.2f} cm^2/s')
-    width_hist_cut.plot(log_scale=True, cblabel='events')
-    plt.xlabel('drift time ($\mu$s)')
-    plt.ylabel('S2 width range 50% area (ns)')
-    ts = np.linspace(0, 800, 100) * units.us
-    plt.plot(ts / units.us, diffusion_model(ts, D, vd, w0),
-             linestyle=':', linewidth=2, c='r',label='model')
-    plt.legend()
-    plt.savefig('diffusion_constant.png')
-    return diffusion_const
+    diffusion_const_err = sigma[0]
+    print(f'Diffusion constant = {fit_result[0]:.2f} +/- {sigma[0]:.2f} cm^2/s ')
+    if plot:
+        plt.figure(3)
+        width_hist_cut.plot(log_scale=True, cblabel='events')
+        plt.xlabel('drift time ($\mu$s)')
+        plt.ylabel('S2 width range 50% area (ns)')
+        ts = np.linspace(0, 800, 100) * units.us
+        plt.plot(ts / units.us, diffusion_model(ts, D, vd, w0),
+                 linestyle=':', linewidth=2, c='r',label='model')
+        plt.axvspan(*fit_range, alpha=0.2, color='blue', label='fit region')
+        plt.legend()
+        plt.savefig('diffusion_constant.png')
+        #corner.corner(samples, show_titles=True, labels=['D', 'w0', 'wsig'])
+    return diffusion_const, diffusion_const_err
