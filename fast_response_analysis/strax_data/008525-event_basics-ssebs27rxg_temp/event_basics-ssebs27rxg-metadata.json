@@ -1,0 +1,153 @@
+{
+    "chunks": [],
+    "compressor": "blosc",
+    "data_kind": "events",
+    "data_type": "event_basics",
+    "dtype": "[(('Start time since unix epoch [ns]', 'time'), '<i8'), (('Exclusive end time since unix epoch [ns]', 'endtime'), '<i8'), (('Number of peaks in the event', 'n_peaks'), '<i4'), (('Drift time between main S1 and S2 in ns', 'drift_time'), '<i4'), (('Main S1 peak index in event', 's1_index'), '<i4'), (('Alternate S1 peak index in event', 'alt_s1_index'), '<i4'), (('Main S1 start time since unix epoch [ns]', 's1_time'), '<i8'), (('Alternate S1 start time since unix epoch [ns]', 'alt_s1_time'), '<i8'), (('Main S1 weighted center time since unix epoch [ns]', 's1_center_time'), '<i8'), (('Alternate S1 weighted center time since unix epoch [ns]', 'alt_s1_center_time'), '<i8'), (('Main S1 end time since unix epoch [ns]', 's1_endtime'), '<i8'), (('Alternate S1 end time since unix epoch [ns]', 'alt_s1_endtime'), '<i8'), (('Main S1 area, uncorrected [PE]', 's1_area'), '<f4'), (('Alternate S1 area, uncorrected [PE]', 'alt_s1_area'), '<f4'), (('Main S1 count of contributing PMTs', 's1_n_channels'), '<i4'), (('Alternate S1 count of contributing PMTs', 'alt_s1_n_channels'), '<i4'), (('Main S1 number of competing PMTs', 's1_n_competing'), '<f4'), (('Alternate S1 number of competing PMTs', 'alt_s1_n_competing'), '<f4'), (('Main S1 width, 50% area [ns]', 's1_range_50p_area'), '<f4'), (('Alternate S1 width, 50% area [ns]', 'alt_s1_range_50p_area'), '<f4'), (('Main S1 fraction of area seen by the top PMT array', 's1_area_fraction_top'), '<f4'), (('Alternate S1 fraction of area seen by the top PMT array', 'alt_s1_area_fraction_top'), '<f4'), (('Drift time using alternate S1 [ns]', 'alt_s1_interaction_drift_time'), '<i4'), (('Time between main and alternate S1 [ns]', 'alt_s1_delay'), '<i4'), (('Main S2 peak index in event', 's2_index'), '<i4'), (('Alternate S2 peak index in event', 'alt_s2_index'), '<i4'), (('Main S2 start time since unix epoch [ns]', 's2_time'), '<i8'), (('Alternate S2 start time since unix epoch [ns]', 'alt_s2_time'), '<i8'), (('Main S2 weighted center time since unix epoch [ns]', 's2_center_time'), '<i8'), (('Alternate S2 weighted center time since unix epoch [ns]', 'alt_s2_center_time'), '<i8'), (('Main S2 end time since unix epoch [ns]', 's2_endtime'), '<i8'), (('Alternate S2 end time since unix epoch [ns]', 'alt_s2_endtime'), '<i8'), (('Main S2 area, uncorrected [PE]', 's2_area'), '<f4'), (('Alternate S2 area, uncorrected [PE]', 'alt_s2_area'), '<f4'), (('Main S2 count of contributing PMTs', 's2_n_channels'), '<i4'), (('Alternate S2 count of contributing PMTs', 'alt_s2_n_channels'), '<i4'), (('Main S2 number of competing PMTs', 's2_n_competing'), '<f4'), (('Alternate S2 number of competing PMTs', 'alt_s2_n_competing'), '<f4'), (('Main S2 width, 50% area [ns]', 's2_range_50p_area'), '<f4'), (('Alternate S2 width, 50% area [ns]', 'alt_s2_range_50p_area'), '<f4'), (('Main S2 fraction of area seen by the top PMT array', 's2_area_fraction_top'), '<f4'), (('Alternate S2 fraction of area seen by the top PMT array', 'alt_s2_area_fraction_top'), '<f4'), (('Drift time using alternate S2 [ns]', 'alt_s2_interaction_drift_time'), '<i4'), (('Time between main and alternate S2 [ns]', 'alt_s2_delay'), '<i4'), (('Main S2 reconstructed X position, uncorrected [cm]', 's2_x'), '<f4'), (('Main S2 reconstructed Y position, uncorrected [cm]', 's2_y'), '<f4'), (('Alternate S2 reconstructed X position, uncorrected [cm]', 'alt_s2_x'), '<f4'), (('Alternate S2 reconstructed Y position, uncorrected [cm]', 'alt_s2_y'), '<f4')]",
+    "lineage": {
+        "event_basics": [
+            "EventBasics",
+            "0.5.3",
+            {
+                "allow_posts2_s1s": false,
+                "force_main_before_alt": false
+            }
+        ],
+        "events": [
+            "Events",
+            "0.0.0",
+            {
+                "left_event_extension": 1000000,
+                "right_event_extension": 1000000,
+                "trigger_max_competing": 7,
+                "trigger_min_area": 100
+            }
+        ],
+        "lone_hits": [
+            "Peaklets",
+            "0.3.4",
+            {
+                "gain_model": [
+                    "to_pe_constant",
+                    "1300V_20200428"
+                ],
+                "hit_min_amplitude": "pmt_commissioning_initial",
+                "n_tpc_pmts": 494,
+                "peak_left_extension": 30,
+                "peak_min_pmts": 4,
+                "peak_right_extension": 200,
+                "peak_split_filter_wing_width": 70,
+                "peak_split_gof_threshold": [
+                    null,
+                    [
+                        [
+                            0.5,
+                            1
+                        ],
+                        [
+                            3.5,
+                            0.25
+                        ]
+                    ],
+                    [
+                        [
+                            2,
+                            1
+                        ],
+                        [
+                            4.5,
+                            0.4
+                        ]
+                    ]
+                ],
+                "peak_split_iterations": 20,
+                "peak_split_min_area": 40.0,
+                "peaklet_gap_threshold": 350,
+                "tight_coincidence_window_left": 50,
+                "tight_coincidence_window_right": 50
+            }
+        ],
+        "merged_s2s": [
+            "MergedS2s",
+            "0.0.0",
+            {
+                "s2_merge_max_area": 5000.0,
+                "s2_merge_max_duration": 15000,
+                "s2_merge_max_gap": 3500
+            }
+        ],
+        "peak_basics": [
+            "PeakBasics",
+            "0.0.7",
+            {
+                "n_top_pmts": 253
+            }
+        ],
+        "peak_positions": [
+            "PeakPositions",
+            "0.1.0",
+            {
+                "min_reconstruction_area": 10,
+                "n_top_pmts": 253,
+                "nn_architecture": "https://raw.githubusercontent.com/XENON1T/pax/master/pax/data/XENON1T_tensorflow_nn_pos_20171217_sr0.json",
+                "nn_weights": "https://raw.githubusercontent.com/XENON1T/pax/master/pax/data/XENON1T_tensorflow_nn_pos_weights_20171217_sr0.h5"
+            }
+        ],
+        "peak_proximity": [
+            "PeakProximity",
+            "0.4.0",
+            {
+                "min_area_fraction": 0.5,
+                "nearby_window": 10000000,
+                "peak_max_proximity_time": 100000000
+            }
+        ],
+        "peaklet_classification": [
+            "PeakletClassification",
+            "0.2.0",
+            {
+                "s1_max_rise_time": 60,
+                "s1_max_rise_time_post100": 150,
+                "s1_min_coincidence": 3,
+                "s2_min_pmts": 4
+            }
+        ],
+        "peaks": [
+            "Peaks",
+            "0.1.1",
+            {}
+        ],
+        "pulse_counts": [
+            "PulseProcessing",
+            "0.2.2",
+            {
+                "baseline_samples": 40,
+                "hev_gain_model": [
+                    "disabled",
+                    null
+                ],
+                "hit_min_amplitude": "pmt_commissioning_initial",
+                "n_tpc_pmts": 494,
+                "pmt_pulse_filter": null,
+                "save_outside_hits": [
+                    3,
+                    20
+                ],
+                "tail_veto_duration": 3000000,
+                "tail_veto_pass_extend": 3,
+                "tail_veto_pass_fraction": 0.05,
+                "tail_veto_resolution": 1000,
+                "tail_veto_threshold": 0
+            }
+        ],
+        "raw_records_mv": [
+            "DAQReader",
+            "0.0.0",
+            {}
+        ]
+    },
+    "lineage_hash": "ssebs27rxg",
+    "run_id": "008525",
+    "strax_version": "0.11.1",
+    "writing_started": 1594625883.653009
+}
