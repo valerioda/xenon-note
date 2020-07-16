@@ -1,0 +1,103 @@
+{
+    "chunks": [
+        {
+            "chunk_i": 0,
+            "end": 1594671442600003200,
+            "filename": "peaklets-f3rty2w73s-000000",
+            "filesize": 8252511,
+            "first_endtime": 1594671441000168020,
+            "first_time": 1594671441000167430,
+            "last_endtime": 1594671442599176180,
+            "last_time": 1594671442599175580,
+            "n": 9220,
+            "nbytes": 35856580,
+            "run_id": "008616",
+            "start": 1594671441000000000
+        }
+    ],
+    "compressor": "zstd",
+    "data_kind": "peaklets",
+    "data_type": "peaklets",
+    "dtype": "[(('Start time since unix epoch [ns]', 'time'), '<i8'), (('Length of the interval in samples', 'length'), '<i4'), (('Width of one sample [ns]', 'dt'), '<i2'), (('Channel/PMT number', 'channel'), '<i2'), (('Classification of the peak(let)', 'type'), '|i1'), (('Integral across channels [PE]', 'area'), '<f4'), (('Integral per channel [PE]', 'area_per_channel'), '<f4', (494,)), (('Number of hits contributing at least one sample to the peak ', 'n_hits'), '<i4'), (('Waveform data in PE/sample (not PE/ns!)', 'data'), '<f4', (200,)), (('Peak widths in range of central area fraction [ns]', 'width'), '<f4', (11,)), (('Peak widths: time between nth and 5th area decile [ns]', 'area_decile_from_midpoint'), '<f4', (11,)), (('Does the channel reach ADC saturation?', 'saturated_channel'), '<i2', (494,)), (('Total number of saturated channels', 'n_saturated_channels'), '<i2'), (('Hits within tight range of mean', 'tight_coincidence'), '<i2'), (('Largest gap between hits inside peak [ns]', 'max_gap'), '<i4'), (('Maximum interior goodness of split', 'max_goodness_of_split'), '<f4')]",
+    "end": 1594671442600003200,
+    "lineage": {
+        "lone_hits": [
+            "Peaklets",
+            "0.3.4",
+            {
+                "gain_model": [
+                    "to_pe_constant",
+                    "1300V_20200428"
+                ],
+                "hit_min_amplitude": "pmt_commissioning_initial",
+                "n_tpc_pmts": 494,
+                "peak_left_extension": 30,
+                "peak_min_pmts": 4,
+                "peak_right_extension": 200,
+                "peak_split_filter_wing_width": 70,
+                "peak_split_gof_threshold": [
+                    null,
+                    [
+                        [
+                            1.5,
+                            1
+                        ],
+                        [
+                            4.5,
+                            0.25
+                        ]
+                    ],
+                    [
+                        [
+                            2,
+                            1
+                        ],
+                        [
+                            4.5,
+                            0.4
+                        ]
+                    ]
+                ],
+                "peak_split_iterations": 20,
+                "peak_split_min_area": 40.0,
+                "peaklet_gap_threshold": 350,
+                "tight_coincidence_window_left": 50,
+                "tight_coincidence_window_right": 50
+            }
+        ],
+        "pulse_counts": [
+            "PulseProcessing",
+            "0.2.2",
+            {
+                "baseline_samples": 40,
+                "hev_gain_model": [
+                    "disabled",
+                    null
+                ],
+                "hit_min_amplitude": "pmt_commissioning_initial",
+                "n_tpc_pmts": 494,
+                "pmt_pulse_filter": null,
+                "save_outside_hits": [
+                    3,
+                    20
+                ],
+                "tail_veto_duration": 3000000,
+                "tail_veto_pass_extend": 3,
+                "tail_veto_pass_fraction": 0.05,
+                "tail_veto_resolution": 1000,
+                "tail_veto_threshold": 0
+            }
+        ],
+        "raw_records_mv": [
+            "DAQReader",
+            "0.0.0",
+            {}
+        ]
+    },
+    "lineage_hash": "f3rty2w73s",
+    "run_id": "008616",
+    "start": 1594671441000000000,
+    "strax_version": "0.11.1",
+    "writing_ended": 1594801255.566357,
+    "writing_started": 1594801177.2792811
+}

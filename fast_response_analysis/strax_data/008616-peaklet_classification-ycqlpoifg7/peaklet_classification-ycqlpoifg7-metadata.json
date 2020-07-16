@@ -1,0 +1,113 @@
+{
+    "chunks": [
+        {
+            "chunk_i": 0,
+            "end": 1594671442600003200,
+            "filename": "peaklet_classification-ycqlpoifg7-000000",
+            "filesize": 99770,
+            "first_endtime": 1594671441000168020,
+            "first_time": 1594671441000167430,
+            "last_endtime": 1594671442599176180,
+            "last_time": 1594671442599175580,
+            "n": 9220,
+            "nbytes": 156740,
+            "run_id": "008616",
+            "start": 1594671441000000000
+        }
+    ],
+    "compressor": "blosc",
+    "data_kind": "peaklets",
+    "data_type": "peaklet_classification",
+    "dtype": "[(('Start time since unix epoch [ns]', 'time'), '<i8'), (('Length of the interval in samples', 'length'), '<i4'), (('Width of one sample [ns]', 'dt'), '<i2'), (('Channel/PMT number', 'channel'), '<i2'), (('Classification of the peak(let)', 'type'), '|i1')]",
+    "end": 1594671442600003200,
+    "lineage": {
+        "lone_hits": [
+            "Peaklets",
+            "0.3.4",
+            {
+                "gain_model": [
+                    "to_pe_constant",
+                    "1300V_20200428"
+                ],
+                "hit_min_amplitude": "pmt_commissioning_initial",
+                "n_tpc_pmts": 494,
+                "peak_left_extension": 30,
+                "peak_min_pmts": 4,
+                "peak_right_extension": 200,
+                "peak_split_filter_wing_width": 70,
+                "peak_split_gof_threshold": [
+                    null,
+                    [
+                        [
+                            1.5,
+                            1
+                        ],
+                        [
+                            4.5,
+                            0.25
+                        ]
+                    ],
+                    [
+                        [
+                            2,
+                            1
+                        ],
+                        [
+                            4.5,
+                            0.4
+                        ]
+                    ]
+                ],
+                "peak_split_iterations": 20,
+                "peak_split_min_area": 40.0,
+                "peaklet_gap_threshold": 350,
+                "tight_coincidence_window_left": 50,
+                "tight_coincidence_window_right": 50
+            }
+        ],
+        "peaklet_classification": [
+            "PeakletClassification",
+            "0.2.0",
+            {
+                "s1_max_rise_time": 60,
+                "s1_max_rise_time_post100": 150,
+                "s1_min_coincidence": 3,
+                "s2_min_pmts": 4
+            }
+        ],
+        "pulse_counts": [
+            "PulseProcessing",
+            "0.2.2",
+            {
+                "baseline_samples": 40,
+                "hev_gain_model": [
+                    "disabled",
+                    null
+                ],
+                "hit_min_amplitude": "pmt_commissioning_initial",
+                "n_tpc_pmts": 494,
+                "pmt_pulse_filter": null,
+                "save_outside_hits": [
+                    3,
+                    20
+                ],
+                "tail_veto_duration": 3000000,
+                "tail_veto_pass_extend": 3,
+                "tail_veto_pass_fraction": 0.05,
+                "tail_veto_resolution": 1000,
+                "tail_veto_threshold": 0
+            }
+        ],
+        "raw_records_mv": [
+            "DAQReader",
+            "0.0.0",
+            {}
+        ]
+    },
+    "lineage_hash": "ycqlpoifg7",
+    "run_id": "008616",
+    "start": 1594671441000000000,
+    "strax_version": "0.11.1",
+    "writing_ended": 1594801449.310694,
+    "writing_started": 1594801436.165854
+}
