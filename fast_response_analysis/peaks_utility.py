@@ -25,6 +25,14 @@ def plot_area(peak_basics,low=0,high=5,binning=500):
     plt.xscale('log')
     plt.yscale('log')
     
+def plot_width(peak_basics,low=1,high=4,binning=500):
+    p_width = Hist1d(peak_basics['range_50p_area'], bins=(np.logspace(low, high, binning)))
+    p_width.plot()
+    plt.xlabel("peak width 50% (ns)", ha='right', x=1)
+    plt.ylabel("events", ha='right', y=1)
+    plt.xscale('log')
+    plt.yscale('log')
+    
 def plot_risetime(peak_basics,low=1,high=5,binning=500):
     rise_time = Hist1d(peak_basics['rise_time'], bins=(np.logspace(low, high, binning)))
     rise_time.plot()
@@ -76,6 +84,15 @@ def plot_area_top(peak_basics,low=0,high=5,low2=-2,high2=0,binning=500):
     plt.xscale('log')
     plt.yscale('log')
     
+def plot_width_top(peak_basics,low=1,high=4,low2=0,high2=1,binning=500):
+    phmax = Histdd(peak_basics['range_50p_area'], peak_basics['area_fraction_top'],
+                    bins=(np.logspace(low, high, binning), np.linspace(low2, high2, binning)))
+    plt.figure(figsize=(12,6))
+    phmax.plot(log_scale=True, cblabel='events')
+    plt.xlabel("peak width 50% (ns)", ha='right', x=1)
+    plt.ylabel("area fraction top", ha='right', y=1)
+    plt.xscale('log')
+
 def rectangle(bounds1,bounds2,color):
     plt.gca().add_patch(matplotlib.patches.Rectangle((bounds1[0],bounds2[0]),
                                                      bounds1[1]-bounds1[0],
@@ -136,3 +153,33 @@ def f90(peaks,low=0,high=5,low2=-3,high2=0,binning=500):
     plt.xscale('log')
     plt.yscale('log')
     return f90
+
+def select_data(st, run_id):
+    
+    area = []
+    width = []
+    rise_time = []
+    max_pmt_area = []
+    area_top = []
+    time = []
+    r_data = pd.DataFrame(columns=['area','range_50p_area','rise_time',
+                                   'max_pmt_area','area_fraction_top','time'])
+    
+    for chunk in st.get_iter(run_id, ['peak_basics'], max_workers=20,
+                         keep_columns = ('area', 'range_50p_area','rise_time',
+                                         'max_pmt_area','area_fraction_top','time') ):
+        area = np.append(area,chunk.data['area'])
+        width = np.append(width,chunk.data['range_50p_area'])
+        rise_time = np.append(rise_time,chunk.data['rise_time'])
+        max_pmt_area = np.append(max_pmt_area,chunk.data['max_pmt_area'])
+        area_top = np.append(area_top,chunk.data['area_fraction_top'])
+        time = np.append(time,chunk.data['time']) 
+    """"""
+    r_data['area'] = area
+    r_data['range_50p_area'] = width
+    r_data['rise_time'] = rise_time
+    r_data['max_pmt_area'] = max_pmt_area
+    r_data['area_fraction_top'] = area_top
+    r_data['time'] = time
+    """"""
+    return r_data
