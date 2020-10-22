@@ -73,7 +73,7 @@ def plot_area_maxpmt(peak_basics,low=0,high=5,low2=0,high2=2,binning=500):
     plt.xscale('log')
     plt.yscale('log')
 
-def plot_area_top(peak_basics,low=0,high=5,low2=-2,high2=0,binning=500):
+def plot_area_top(peak_basics,low=0,high=5,low2=-2,high2=0,binning=500,log=False):
     phmax = Histdd(peak_basics['area'], peak_basics['area_fraction_top'],
                     bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
     plt.figure(figsize=(12,6))
@@ -82,7 +82,7 @@ def plot_area_top(peak_basics,low=0,high=5,low2=-2,high2=0,binning=500):
     #plt.ylabel("max PMT area (PE)", ha='right', y=1)
     plt.ylabel("area fraction top", ha='right', y=1)
     plt.xscale('log')
-    plt.yscale('log')
+    if (log): plt.yscale('log')
     
 def plot_width_top(peak_basics,low=1,high=4,low2=0,high2=1,binning=500):
     phmax = Histdd(peak_basics['range_50p_area'], peak_basics['area_fraction_top'],
@@ -183,3 +183,21 @@ def select_data(st, run_id):
     r_data['time'] = time
     """"""
     return r_data
+
+def plot_some_peaks(peaks, max_plots = 5, randomize = False):
+    """Plot the first peaks in the peaks collection (max number of 5 by default)"""
+    if randomize:
+        # This randomly takes max_plots in the range (0, len(peaks)). Plot these indices
+        indices = np.random.randint(0, len(peaks), max_plots)
+    else:
+        # Just take the first max_plots peaks in the data
+        indices = range(max_plots)
+    for i in indices:
+        p = peaks[i]
+        start, stop = p['time'], p['endtime']
+        st.plot_peaks(run_id,
+                      time_range = (start, stop))
+        plt.title(f'S{p["type"]} of ~{int(p["area"])} PE (width {int(p["range_50p_area"])} ns)\n'
+                  f'detected by {p["n_channels"]} PMTs at:\n'
+                  f'{datetime.datetime.fromtimestamp(start/1e9).isoformat()}')  # should in s not ns hence /1e9
+        plt.show()
