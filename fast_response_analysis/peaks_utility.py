@@ -154,26 +154,29 @@ def f90(peaks,low=0,high=5,low2=-3,high2=0,binning=500):
     plt.yscale('log')
     return f90
 
+
 def select_data(st, run_id):
-    
     area = []
     width = []
     rise_time = []
     max_pmt_area = []
     area_top = []
     time = []
+    channel = []
     r_data = pd.DataFrame(columns=['area','range_50p_area','rise_time',
-                                   'max_pmt_area','area_fraction_top','time'])
+                                   'max_pmt_area','area_fraction_top','time','channel'])
     
-    for chunk in st.get_iter(run_id, ['peak_basics'], max_workers=20,
+    for chunk in st.get_iter(run_id, ['peaks','peak_basics'], max_workers=10,
                          keep_columns = ('area', 'range_50p_area','rise_time',
-                                         'max_pmt_area','area_fraction_top','time') ):
+                                         'max_pmt_area','area_fraction_top','time',
+                                         'channel'), seconds_range=(0,30)):
         area = np.append(area,chunk.data['area'])
         width = np.append(width,chunk.data['range_50p_area'])
         rise_time = np.append(rise_time,chunk.data['rise_time'])
         max_pmt_area = np.append(max_pmt_area,chunk.data['max_pmt_area'])
         area_top = np.append(area_top,chunk.data['area_fraction_top'])
         time = np.append(time,chunk.data['time']) 
+        channel = np.append(channel,chunk.data['channel'])
     """"""
     r_data['area'] = area
     r_data['range_50p_area'] = width
@@ -181,8 +184,12 @@ def select_data(st, run_id):
     r_data['max_pmt_area'] = max_pmt_area
     r_data['area_fraction_top'] = area_top
     r_data['time'] = time
+    r_data['channel'] = channel
     """"""
     return r_data
+
+
+
 
 def plot_some_peaks(peaks, max_plots = 5, randomize = False):
     """Plot the first peaks in the peaks collection (max number of 5 by default)"""
