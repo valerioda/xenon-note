@@ -1,0 +1,41 @@
+import os
+import argparse
+import pandas as pd
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
+from scipy.integrate import quad
+import scipy.special as sc
+from scipy.integrate import odeint
+import process_utility as psu
+import scipy.integrate as integ
+from scipy.optimize import curve_fit
+import time
+
+def main():
+    
+    par = argparse.ArgumentParser(description = 'SiPM integral calculate')
+    arg, st, sf = par.add_argument, 'store_true', 'store_false'
+    arg('-d', '--directory', nargs=1, action='store', help = 'local directory')
+    #arg('-v', '--voltages', nargs=2, action='store', help = 'Voltage interval')
+    #arg('-st', '--step', nargs=1, action='store', help = 'Voltage step')
+    #arg('-n', '--number', nargs=1, action='store', help = 'Number of peak to integrate')
+    #args = vars(par.parse_args())
+    
+    print('Select S2 records')
+    
+    local_dir = '.'
+    if args['directory']: local_dir = args['directory'][0]
+    d_out = f"{local_dir}/data"
+    try: os.mkdir(d_out)
+    except: pass
+    
+
+    
+    return
+
+
+
+if __name__=="__main__":
+    main()

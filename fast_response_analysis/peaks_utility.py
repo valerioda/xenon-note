@@ -60,11 +60,9 @@ def plot_area_width(peak_basics,low=0,high=5,low2=1,high2=4,binning=500):
     plt.xscale('log')
     plt.yscale('log')
 
-def plot_area_maxpmt(peak_basics,low=0,high=5,low2=0,high2=2,binning=500):
-    #phmax = Histdd(peak_basics['area'], peak_basics['max_pmt_area'],
-    #                bins=(np.logspace(0, 4, 200), np.logspace(0, 3, 200)))
+def plot_area_maxpmt(peak_basics,low=0,high=5,binning=500,binning2=200):
     phmax = Histdd(peak_basics['area'], peak_basics['max_pmt_area']/peak_basics['area']*100,
-                    bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
+                    bins=(np.logspace(low, high, binning), np.linspace(0, 1, binning2)))
     plt.figure(figsize=(12,6))
     phmax.plot(log_scale=True, cblabel='events')
     plt.xlabel("peak area (PE)", ha='right', x=1)
@@ -99,7 +97,7 @@ def rectangle(bounds1,bounds2,color):
                                                      bounds2[1]-bounds2[0],
                                                      edgecolor=color,facecolor='none'))
 
-def plotwf(peaks,nn,arealow=2000,areahigh=1e4,xlimh=1000):
+def plot_waveforms(peaks,nn,arealow=2000,areahigh=1e4,xlimh=1000):
     dt = peaks['dt'][0]
     print('total number of records',peaks['data'].shape[0])
     dts = np.arange(0,peaks['data'].shape[1]*dt,dt)
@@ -113,6 +111,18 @@ def plotwf(peaks,nn,arealow=2000,areahigh=1e4,xlimh=1000):
     plt.ylabel(f"ADC", ha='right', y=1)
     plt.xlim(0,xlimh)
 
+def plotwf(peaks,nn,area_cut,width_cut,color='b'):
+    peaks=peaks[(peaks['area']<area_cut[1])&(peaks['area']>area_cut[0])&
+                     (peaks['range_50p_area']<width_cut[1])&
+                      (peaks['range_50p_area']>width_cut[0])]
+    dt = peaks['dt'][0]
+    print('total number of records',peaks['data'].shape[0])
+    dts = np.arange(0,peaks['data'].shape[1]*dt,dt)
+    fig, axs = plt.subplots(nn,figsize=(12,8))
+    for i in range(nn):
+        axs[i].plot(dts,peaks['data'][i],drawstyle='steps',color=color)
+        axs[i].set_xlabel("time (ns)", ha='right', x=1)
+        axs[i].set_ylabel(f"ADC", ha='right', y=1)
     
 def events_vs_time(runs,etype,area_bounds,width_bounds):
     run_n, events = [], np.zeros(len(runs))
