@@ -20,16 +20,23 @@ from multihist import Hist1d, Histdd
 
 colors = ['tab:blue','tab:orange','tab:green','tab:red','tab:purple']
 
-def select_peaks_times(st, run_id, peaks, times, ndiv = 10, div = 0, s2_start = 0):
+def select_peaks_times(st, run_id, peaks, events, ndiv = 10, div = 0, s2_start = 0):
     area = []
     width = []
     areachn = []
     aft = []
-    r_data = pd.DataFrame(columns=['area','range_50p_area','area_per_channel','area_fraction_top'])
+    s1_times = []
+    s1_endtimes = []
+    s2_times = []
+    s2_endtimes = []
+    drift_times = []
+    r_data = pd.DataFrame(columns=['area','range_50p_area','area_per_channel','area_fraction_top',
+                                  's1_time','s1_endtime','s2_time','s2_endtime','drift_time'])
+    
     t_start = time.time()
     tsec = (peaks['endtime'][-1]-peaks['time'][0])/1e9
     csec = tsec/ndiv
-    print('run',run_id,'Total events',len(times),'total peaks',len(peaks),'duration',tsec)
+    print('run',run_id,'Total events',len(events),'total peaks',len(peaks),'duration',tsec)
     k = s2_start
     plt.figure(k,figsize=(12,6))
     #for i in range(nd):
@@ -41,18 +48,28 @@ def select_peaks_times(st, run_id, peaks, times, ndiv = 10, div = 0, s2_start = 
     ft = pp['endtime'][-1]
     for j in range(nn):
         t = pp['time'][j]
-        if t >= ft or k == len(times): break
-        elif times[k]==0:
+        if t >= ft or k == len(events): break
+        elif events['s2_time'][k]==0:
             area.append(0)
             width.append(0)
             areachn.append(0)
             aft.append(0)
+            s1_times.append(events['s1_time'][k])
+            s1_endtimes.append(events['s1_endtime'][k])
+            s2_times.append(events['s2_time'][k])
+            s2_endtimes.append(events['s2_endtime'][k])
+            drift_times.append(events['drift_time'][k])
             k += 1
-        elif t == times[k] and k < len(times)-1:
+        elif t == events['s2_time'][k] and k < len(events)-1:
             area.append(pp['area'][j])
             width.append(pp['range_50p_area'][j])
             areachn.append(pp['area_per_channel'][j])
             aft.append(pp['area_fraction_top'][j])
+            s1_times.append(events['s1_time'][k])
+            s1_endtimes.append(events['s1_endtime'][k])
+            s2_times.append(events['s2_time'][k])
+            s2_endtimes.append(events['s2_endtime'][k])
+            drift_times.append(events['drift_time'][k])
             if (k<s2_start+10):
                 plt.plot( dts,pp['data'][j],drawstyle='steps',label=f'{k} t = {t}')
                 plt.xlabel("time (ns)", ha='right', x=1,fontsize=12)
@@ -66,11 +83,16 @@ def select_peaks_times(st, run_id, peaks, times, ndiv = 10, div = 0, s2_start = 
     r_data['range_50p_area'] = width
     r_data['area_per_channel'] = areachn
     r_data['area_fraction_top'] = aft
+    r_data['s1_time'] = s1_times
+    r_data['s1_endtime'] = s1_endtimes
+    r_data['s2_time'] = s2_times
+    r_data['s2_endtime'] = s2_endtimes
+    r_data['drift_time'] = drift_times
     r_data.to_hdf(f'data/select_peaks_run{run_id}_div{div}.h5', key='df', mode='w')
     return r_data, k
 
 
-def select_records_times(st, run_id, peaks, times, endtimes, pdata, PMTs, ndiv = 10, div = 0, s2_start = 0):
+def select_records_times(st, run_id, peaks, events, pdata, PMTs, ndiv = 10, div = 0, s2_start = 0):
     area = []
     width = []
     area_per_channel = []
@@ -81,18 +103,30 @@ def select_records_times(st, run_id, peaks, times, endtimes, pdata, PMTs, ndiv =
     ev = []
     wf = []
     dt = []
+    s1_times = []
+    s1_endtimes = []
+    s2_times = []
+    s2_endtimes = []
+    drift_times = []
     r_data = pd.DataFrame(columns=['event_number','event_time','time','channel',
-                                   'area','range_50p_area','area_per_channel','area_fraction_top','data','dt'])
+                                   'area','range_50p_area','area_per_channel','area_fraction_top','data','dt',
+                                   's1_time','s1_endtime','s2_time','s2_endtime','drift_time'])
     
     areas = np.array(pdata['area'])
     widths = np.array(pdata['range_50p_area'])
-    area_chn = np.array(pdata['area_per_channel'])
     afts = np.array(pdata['area_fraction_top'])
+    area_chn = np.array(pdata['area_per_channel'])
+    
+    s1_t = np.array(pdata['s1_time'])
+    s1_et = np.array(pdata['s1_endtime'])
+    s2_t = np.array(pdata['s2_time'])
+    s2_et = np.array(pdata['s2_endtime'])
+    d_t = np.array(pdata['drift_time'])
     
     t_start = time.time()
     tsec = (peaks['endtime'][-1]-peaks['time'][0])/1e9
     csec = tsec/ndiv
-    print('run',run_id,'Total events',len(times),'total peaks',len(peaks),'duration',tsec)
+    print('run',run_id,'Total events',len(events),'total peaks',len(peaks),'duration',tsec)
     k, kk = s2_start, 0
     #for ii in range(1):
     rr = st.get_array(run_id,'records',
@@ -102,17 +136,17 @@ def select_records_times(st, run_id, peaks, times, endtimes, pdata, PMTs, ndiv =
     ft = rr['time'][-1] + rr['dt'][0]*rr['length'][-1]
     for j in range(nr):
         t = rr['time'][j]
-        if t >= ft or k == len(times): break
-        elif times[k] == 0: k += 1
-        elif t >= times[k] and kk < len(areas):
+        if t >= ft or k == len(events): break
+        elif events['s2_time'][k] == 0: k += 1
+        elif t >= events['s2_time'][k] and kk < len(pdata):
             jj = j
-            while rr['time'][jj] < endtimes[k]:
+            while rr['time'][jj] < events['s2_endtime'][k]:
                 for i, PMT in enumerate(PMTs):
                     chn = rr['channel'][jj]
                     areai = rr['area'][jj]
                     if chn == PMT and rr['record_i'][jj] > 0:
                         ev.append(k)
-                        et.append(times[k])
+                        et.append(events['s2_time'][k])
                         channel.append(chn)
                         tempo.append(rr['time'][jj])
                         area.append(areas[kk])
@@ -123,22 +157,35 @@ def select_records_times(st, run_id, peaks, times, endtimes, pdata, PMTs, ndiv =
                         area_per_channel.append(area_channel)
                         wf.append(rr['data'][jj])    
                         dt.append(rr['dt'][jj])
+                        
+                        s1_times.append(s1_t[kk])
+                        s1_endtimes.append(s1_et[kk])
+                        s2_times.append(s2_t[kk])
+                        s2_endtimes.append(s2_et[kk])
+                        drift_times.append(d_t[kk])
                 jj += 1
             k += 1
             kk += 1
     diff = time.time() - t_start
-    print(f'division n. {div}, tot. events {nr}, selected events: {len(area)} {k}, time to process: {diff:.2f} s')
+    print(f'division n. {div}, tot. events {nr}, selected events: {len(ev)} {k}, time to process: {diff:.2f} s')
     del rr
     r_data['event_number'] = ev
     r_data['event_time'] = et
     r_data['time'] = tempo
     r_data['channel'] = channel
-    r_data['area'] = area
-    r_data['area_per_channel'] = area_per_channel
-    r_data['range_50p_area'] = width
-    r_data['area_fraction_top'] = aft
     r_data['data'] = wf
     r_data['dt'] = dt
+    
+    r_data['area'] = area
+    r_data['range_50p_area'] = width
+    r_data['area_fraction_top'] = aft
+    r_data['area_per_channel'] = area_per_channel
+    
+    r_data['s1_time'] = s1_times
+    r_data['s1_endtime'] = s1_endtimes
+    r_data['s2_time'] = s2_times
+    r_data['s2_endtime'] = s2_endtimes
+    r_data['drift_time'] = drift_times
     try: os.mkdir('./data')
     except: pass
     r_data.to_hdf(f'data/select_records_run{run_id}_div{div}.h5', key='df', mode='w')
@@ -160,8 +207,14 @@ def merge_records(run_id, PMTs, ndiv = 10, path='./data'):
     dt = []
     position_x = []
     position_y = []
+    s1_times = []
+    s1_endtimes = []
+    s2_times = []
+    s2_endtimes = []
+    drift_times = []
     r_data = pd.DataFrame(columns=['event_number','event_time','time','channel','area','area_per_channel','area_fraction_top',
-                                   'range_50p_area','width50','width90','data','dt','position_x','position_y'])
+                                   'range_50p_area','width50','width90','data','dt','position_x','position_y',
+                                   's1_time','s1_endtime','s2_time','s2_endtime','drift_time'])
     positions = straxen.pmt_positions()
     t_start = time.time()
     for div in range(ndiv):
@@ -193,7 +246,11 @@ def merge_records(run_id, PMTs, ndiv = 10, path='./data'):
                 aft.append(rr['area_fraction_top'][idx])
                 wf.append(wftot)
                 dt.append(rr['dt'][idx])
-                
+                s1_times.append(rr['s1_time'][idx])
+                s1_endtimes.append(rr['s1_endtime'][idx])
+                s2_times.append(rr['s2_time'][idx])
+                s2_endtimes.append(rr['s2_endtime'][idx])
+                drift_times.append(rr['drift_time'][idx])
                 # width calculation
                 ii, areafrac = 1, 0.1
                 ilo50, ihi50 = int(wftot.argmax()-ii), int(wftot.argmax()+ii)
@@ -256,6 +313,11 @@ def merge_records(run_id, PMTs, ndiv = 10, path='./data'):
     r_data['dt'] = dt
     r_data['position_x'] = position_x
     r_data['position_y'] = position_y
+    r_data['s1_time'] = s1_times
+    r_data['s1_endtime'] = s1_endtimes
+    r_data['s2_time'] = s2_times
+    r_data['s2_endtime'] = s2_endtimes
+    r_data['drift_time'] = drift_times
     r_data.to_hdf(f'{path}/merged_records_run{run_id}.h5', key='df', mode='w')
     return r_data
 
