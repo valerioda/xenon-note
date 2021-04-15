@@ -22,7 +22,7 @@ from scipy.ndimage import gaussian_filter1d
 import peaks_utility as psu
 
 
-def plot_area_width_aft(events, run_id, low = 0, high = 6, low2 = 0, high2 = 1, binning = 500):
+def plot_area_width_aft_kr(events, run_id, low = 0, high = 6, low2 = 0, high2 = 1, binning = 500):
     ph_s1 = Histdd(events['s1_a_area'], events['s1_a_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(1, 6, binning)))
     ph_s2 = Histdd(events['s2_a_area'], events['s2_a_range_50p_area'],
@@ -47,6 +47,30 @@ def plot_area_width_aft(events, run_id, low = 0, high = 6, low2 = 0, high2 = 1, 
     plt.title(f'run {run_id}')
     plt.xscale('log')
 
+def plot_area_width_aft_bkg(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binning = 500):
+    ph_s1 = Histdd(events['s1_area'], events['s1_range_50p_area'],
+                    bins=(np.logspace(low, high, binning), np.logspace(1, 6, binning)))
+    ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
+                    bins=(np.logspace(low, high, binning), np.logspace(1, 6, binning)))
+    phcs1 = Histdd(events['s1_area'], events['s1_area_fraction_top'],
+                    bins=(np.logspace(low, high, binning), np.linspace(0, 1, binning)))
+    phcs2 = Histdd(events['s2_area'], events['s2_area_fraction_top'],
+                    bins=(np.logspace(low, high, binning), np.linspace(0, 1, binning)))
+    plt.figure(figsize=(12,6))
+    ph_s1.plot(log_scale=True, cblabel='S1 events',cmap='plasma')
+    ph_s2.plot(log_scale=True, cblabel='S2 events')
+    plt.xlabel("peak area (PE)", ha='right', x=1)
+    plt.ylabel("peak width 50% (ns)", ha='right', y=1)
+    plt.title(f'run {run_id}')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.figure(figsize=(12,6))
+    phcs1.plot(log_scale=True, cblabel='S1 events',cmap='plasma')
+    phcs2.plot(log_scale=True, cblabel='S2 events')
+    plt.xlabel("peak area (PE)", ha='right', x=1)
+    plt.ylabel("area fraction top", ha='right', y=1)
+    plt.title(f'run {run_id}')
+    plt.xscale('log')
 
 def plots2_area_width(st, run_id, low = 0, high = 6, low2 = 0, high2 = 6, binning = 500):
     events = st.get_array(run_id,'event_info')
@@ -95,8 +119,8 @@ def mask_KrDouble(df,doubleS2=False):
     return mask
 
 
-def mask_s2_area_width_aft(events, run_id, area_cut, width_cut,aft_cut, plot = False,
-                          low = 1, high = 6, low2 = 2, high2 = 4.5, low3 = 0.4, high3 = 0.9, binning=500):
+def mask_s2_area_width_aft_kr(events, run_id, area_cut, width_cut,aft_cut, plot = False,
+                              low = 1, high = 6, low2 = 2, high2 = 4.5, low3 = 0.4, high3 = 0.9, binning=500):
     ph_s2 = Histdd(events['s2_a_area'], events['s2_a_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
     phcs2 = Histdd(events['s2_a_area'], events['s2_a_area_fraction_top'],
@@ -123,6 +147,34 @@ def mask_s2_area_width_aft(events, run_id, area_cut, width_cut,aft_cut, plot = F
     mask &= (events['s2_a_area_fraction_top'] > aft_cut[0]) & (events['s2_a_area_fraction_top'] < aft_cut[1])
     return mask
 
+def mask_s2_area_width_aft_bkg(events, run_id, area_cut, width_cut,aft_cut, plot = False,
+                               low = 1, high = 6, low2 = 2, high2 = 4.5, low3 = 0.4, high3 = 0.9, binning=500):
+    ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
+                    bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
+    phcs2 = Histdd(events['s2_area'], events['s2_area_fraction_top'],
+                    bins=(np.logspace(low, high, binning), np.linspace(low3, high3, binning)))
+    if plot:
+        plt.figure(figsize=(12,6))
+        ph_s2.plot(log_scale=True, cblabel='S2 events')
+        plt.xlabel("peak area (PE)", ha='right', x=1)
+        plt.ylabel("peak width 50% (ns)", ha='right', y=1)
+        plt.title(f'run {run_id}')
+        plt.xscale('log')
+        plt.yscale('log')
+        psu.rectangle(area_cut, width_cut, 'r')
+        
+        plt.figure(figsize=(12,6))
+        phcs2.plot(log_scale=True, cblabel='S2 events')
+        plt.xlabel("peak area (PE)", ha='right', x=1)
+        plt.ylabel("area fraction top", ha='right', y=1)
+        plt.title(f'run {run_id}')
+        plt.xscale('log')
+        psu.rectangle(area_cut, aft_cut, 'r')
+    mask = (events['s2_area'] > area_cut[0]) & (events['s2_area'] < area_cut[1])
+    mask &= (events['s2_range_50p_area'] > width_cut[0]) & (events['s2_range_50p_area'] < width_cut[1])
+    mask &= (events['s2_area_fraction_top'] > aft_cut[0]) & (events['s2_area_fraction_top'] < aft_cut[1])
+    return mask
+
 
 def plots2_area_aft(st, run_id, low = 0, high = 6, low3 = 0, high3 = 1, binning = 500):
     events = st.get_array(run_id,'event_info')
@@ -137,9 +189,67 @@ def plots2_area_aft(st, run_id, low = 0, high = 6, low3 = 0, high3 = 1, binning 
     #plt.yscale('log')
 
 
-def drift_velocity(events, run_id, low = 10, high = 3000, binning = 500, plot=False):
+def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot=False):
     if 'area_ratio' in events: pass
     else: events.insert(1, 'area_ratio', np.divide(events['cs2_a'],events['cs1_a']))
+    events = events[events['area_ratio']<1e3]
+    
+    # cathode drop-off
+    dt = np.linspace(low, high, binning)
+    hdtime = Hist1d(events['drift_time']/1e3, bins=dt)
+    hfilt = gaussian_filter1d(hdtime,8)
+    cathodedt = dt[np.where(np.gradient(hfilt)==np.gradient(hfilt).min())[0][0]]
+    
+    if plot:
+        plt.figure(figsize=(12,6))
+        hdtime.plot(color='b',label='data')
+        plt.ylabel("events", ha='right', y=1)
+        plt.xlabel("drift time ($\mu$s)", ha='right', x=1)
+        plt.title(f'run {run_id}',fontsize=14)
+        plt.axvline(x=cathodedt,linewidth=1,linestyle='-', color='r',label=f'$cathode = {cathodedt:.1f}~\mu$s')
+        plt.legend(fontsize=14)
+
+    mh = Histdd(events['drift_time']/1e3, events['area_ratio'],
+            bins=(np.linspace(low, high, binning), np.logspace(0, 5, 200)))
+    
+    if plot:
+        plt.figure(figsize=(12,6))
+        mh.plot(log_scale=True, cblabel='events')
+        plt.xlabel("drift time ($\mu$s)", ha='right', x=1,fontsize=12)
+        plt.ylabel("cS2/cS1", ha='right', y=1,fontsize=12)
+        plt.title(f'run {run_id}',fontsize=14)
+        plt.yscale('log')
+        plt.xlim(1500,high)
+        plt.axvline(x=cathodedt,linewidth=1,linestyle='-', color='r',label=f'$cathode = {cathodedt:.1f}~\mu$s')
+    
+    # gate drift time
+    dts = np.linspace(1, 20, 200)
+    mh_low = Histdd(events['drift_time']/1e3, events['area_ratio'],
+            bins=(dts, np.linspace(0, 200, 200)),axis_names=['drift_time', 'area_ratio'])
+    median = mh_low.percentile(50, axis='area_ratio')
+    mfilt = gaussian_filter1d(median, 4)
+    gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
+    s2shift = dts[np.where((mfilt-mfilt[50:].mean())<3)[0][0]] # beginning of flat part
+    vd = 1485/(cathodedt-gatedt)
+    vd_err = vd*(10/cathodedt)
+    if plot:
+        plt.figure(figsize=(12,6))
+        mh_low.plot(log_scale=False, cblabel='events')
+        plt.xlabel("drift time ($\mu$s)", ha='right', x=1,fontsize=12)
+        plt.ylabel("cS2/cS1", ha='right', y=1,fontsize=12)
+        plt.title(f'run {run_id}',fontsize=14)
+        median.plot(label='median')
+        plt.plot(dts[1:],mfilt,label='filtered median')
+        plt.axvline(x=s2shift,linewidth=1,linestyle='--',color='violet',label=f'$S2~shift = {s2shift:.1f}~\mu$s')
+        plt.axvline(x=gatedt,linewidth=1,linestyle='--',color='r',label=f'$gate = {gatedt:.1f}~\mu$s')
+        plt.legend(fontsize=14)
+        print(f'Drift velocity = {vd:.3f}~mm/$\mu$s')
+    return vd, vd_err, cathodedt, gatedt, s2shift
+
+
+def drift_velocity_bkg(events, run_id, low = 10, high = 3000, binning = 500, plot=False):
+    if 'area_ratio' in events: pass
+    else: events.insert(1, 'area_ratio', np.divide(events['cs2'],events['cs1']))
     events = events[events['area_ratio']<1e3]
     
     # cathode drop-off
@@ -174,8 +284,8 @@ def drift_velocity(events, run_id, low = 10, high = 3000, binning = 500, plot=Fa
             bins=(dts, np.linspace(0, 200, 200)),axis_names=['drift_time', 'area_ratio'])
     median = mh_low.percentile(50, axis='area_ratio')
     mfilt = gaussian_filter1d(median, 4)
-    #gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
-    gatedt = dts[np.where((mfilt-mfilt[50:].mean())<3)[0][0]] # beginning of flat part
+    gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
+    s2shift = dts[np.where((mfilt-mfilt[50:].mean())<3)[0][0]] # beginning of flat part
     vd = 1485/(cathodedt-gatedt)
     vd_err = vd*(10/cathodedt)
     if plot:
@@ -186,11 +296,11 @@ def drift_velocity(events, run_id, low = 10, high = 3000, binning = 500, plot=Fa
         plt.title(f'run {run_id}',fontsize=14)
         median.plot(label='median')
         plt.plot(dts[1:],mfilt,label='filtered median')
-        #plt.axvline(x=gatedt,linewidth=1,linestyle='--',color='r',label=f'$gate1 = {gatedt:.1f}~\mu$s')
+        plt.axvline(x=s2shift,linewidth=1,linestyle='--',color='violet',label=f'$S2~shift = {s2shift:.1f}~\mu$s')
         plt.axvline(x=gatedt,linewidth=1,linestyle='--',color='r',label=f'$gate = {gatedt:.1f}~\mu$s')
         plt.legend(fontsize=14)
         print(f'Drift velocity = {vd:.3f}~mm/$\mu$s')
-    return vd, vd_err, cathodedt, gatedt
+    return vd, vd_err, cathodedt, gatedt, s2shift
 
 
 def diffusion_model(t, D, vd, w0):
@@ -198,7 +308,7 @@ def diffusion_model(t, D, vd, w0):
     return np.sqrt(2 * sigma_to_r50p**2 * D * t / vd**2 + w0**2)
 
 
-def diffusion_constant(events, run_id, fit_range, vd = 600, plot = False):
+def diffusion_constant_kr(events, run_id, fit_range, vd = 600, plot = False):
     # s2_width_50 vs drift_time
     t = np.linspace(0, 2400, 200)
     ph = Histdd(events['drift_time']/1e3, events['s2_a_range_50p_area'],
@@ -235,6 +345,42 @@ def diffusion_constant(events, run_id, fit_range, vd = 600, plot = False):
         print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
     return diff_const, diff_const_err
 
+def diffusion_constant_bkg(events, run_id, fit_range, vd = 600, plot = False):
+    # s2_width_50 vs drift_time
+    t = np.linspace(0, 2400, 200)
+    ph = Histdd(events['drift_time']/1e3, events['s2_range_50p_area'],
+                bins=(t, np.linspace(100, 15e3, 200)))
+    perc50 = np.array(ph.percentile(percentile=50, axis=1))
+    
+    D_guess = 45e3 * units.cm**2 / units.s
+    w0_guess = 500 * units.ns
+    vd = vd * units.mm / units.us
+    guess = np.array([D_guess, vd, w0_guess])
+    ys_m = diffusion_model(t, *guess)
+    ll = np.where(t>fit_range[0])[0][0]
+    hh = np.where(t>fit_range[1])[0][0]
+    diffusion = lambda x, D, w0: diffusion_model(x, D, vd, w0)
+    popt, pcov = curve_fit(diffusion, t[ll:hh], perc50[ll:hh], p0=(D_guess, w0_guess))
+    perr = np.sqrt(np.diag(pcov))
+    
+    ys_u = diffusion(t, *popt) + 1000
+    ys_m = diffusion(t, *popt)
+    ys_d = diffusion(t, *popt) - 1000
+    diff_const = popt[0]/1e3/(units.cm**2 / units.s)
+    diff_const_err = perr[0]/1e3/(units.cm**2 / units.s)
+    
+    if plot:
+        plt.figure(figsize=(12,6))
+        ph.plot(log_scale=True, cblabel='events')
+        plt.xlabel("drift time (us)", ha='right', x=1,fontsize=12)
+        plt.ylabel("S2 width 50% (ns)", ha='right', y=1,fontsize=12)
+        plt.title(f'run {run_id}',fontsize=14)
+        plt.plot(t[:len(perc50)], perc50, color='b',linestyle='--', label='50% percentile')
+        plt.axvspan(*fit_range, alpha=0.1, color='blue', label='fit region')
+        plt.plot(t, ys_m, label=f'$D = {popt[0]/1e3/(units.cm**2 / units.s):.2f}$ cm$^2$/s',color='r')
+        plt.legend(fontsize=14)
+        print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
+    return diff_const, diff_const_err
 
 def expo(t, a, tau):
     return a*np.exp(-t/tau)
