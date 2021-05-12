@@ -229,7 +229,7 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot
     median = mh_low.percentile(50, axis='area_ratio')
     mfilt = gaussian_filter1d(median, 4)
     gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
-    s2shift = dts[np.where((mfilt-mfilt[50:].mean())<3)[0][0]] # beginning of flat part
+    s2shift = dts[np.where((mfilt[10:]-mfilt[50:].mean())<2)[0][0]] # beginning of flat part
     vd = 1485/(cathodedt-gatedt)
     vd_err = vd*(10/cathodedt)
     if plot:
@@ -242,6 +242,7 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot
         plt.plot(dts[1:],mfilt,label='filtered median')
         plt.axvline(x=s2shift,linewidth=1,linestyle='--',color='violet',label=f'$S2~shift = {s2shift:.1f}~\mu$s')
         plt.axvline(x=gatedt,linewidth=1,linestyle='--',color='r',label=f'$gate = {gatedt:.1f}~\mu$s')
+        plt.axhline(y=mfilt[50:].mean(),color='b',label='mean')
         plt.legend(fontsize=14)
         print(f'Drift velocity = {vd:.3f}~mm/$\mu$s')
     return vd, vd_err, cathodedt, gatedt, s2shift
