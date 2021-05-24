@@ -280,13 +280,13 @@ def drift_velocity_bkg(events, run_id, low = 10, high = 3000, binning = 500, plo
         plt.axvline(x=cathodedt,linewidth=1,linestyle='-', color='r',label=f'$cathode = {cathodedt:.1f}~\mu$s')
     
     # gate drift time
-    dts = np.linspace(1, 20, 200)
+    dts = np.linspace(1, 15, 200)
     mh_low = Histdd(events['drift_time']/1e3, events['area_ratio'],
             bins=(dts, np.linspace(0, 200, 200)),axis_names=['drift_time', 'area_ratio'])
     median = mh_low.percentile(50, axis='area_ratio')
     mfilt = gaussian_filter1d(median, 4)
     gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
-    s2shift = dts[np.where((mfilt-mfilt[50:].mean())<3)[0][0]] # beginning of flat part
+    s2shift = dts[np.where((mfilt[10:]-mfilt[50:].mean())<2)[0][0]] # beginning of flat part
     vd = 1485/(cathodedt-gatedt)
     vd_err = vd*(10/cathodedt)
     if plot:
@@ -344,7 +344,7 @@ def diffusion_constant_kr(events, run_id, fit_range, vd = 600, plot = False):
         plt.plot(t, ys_m, label=f'$D = {popt[0]/1e3/(units.cm**2 / units.s):.2f}$ cm$^2$/s',color='r')
         plt.legend(fontsize=14)
         print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
-    return diff_const, diff_const_err
+    return diff_const, diff_const_err, popt
 
 def diffusion_constant_bkg(events, run_id, fit_range, vd = 600, plot = False):
     # s2_width_50 vs drift_time
@@ -381,7 +381,7 @@ def diffusion_constant_bkg(events, run_id, fit_range, vd = 600, plot = False):
         plt.plot(t, ys_m, label=f'$D = {popt[0]/1e3/(units.cm**2 / units.s):.2f}$ cm$^2$/s',color='r')
         plt.legend(fontsize=14)
         print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
-    return diff_const, diff_const_err
+    return diff_const, diff_const_err, popt
 
 def expo(t, a, tau):
     return a*np.exp(-t/tau)
