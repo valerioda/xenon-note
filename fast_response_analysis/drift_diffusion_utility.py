@@ -20,6 +20,7 @@ from straxen import units
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
 import peaks_utility as psu
+from datetime import datetime, timedelta
 
 
 def plot_area_width_aft_kr(events, run_id, low = 0, high = 6, low2 = 0, high2 = 1, binning = 500):
@@ -47,7 +48,8 @@ def plot_area_width_aft_kr(events, run_id, low = 0, high = 6, low2 = 0, high2 = 
     plt.title(f'run {run_id}')
     plt.xscale('log')
 
-def plot_area_width_aft_bkg(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binning = 500):
+    
+def plot_area_width_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binning = 500):
     ph_s1 = Histdd(events['s1_area'], events['s1_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(1, 6, binning)))
     ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
@@ -72,6 +74,7 @@ def plot_area_width_aft_bkg(events, run_id, low = 0, high = 7, low2 = 0, high2 =
     plt.title(f'run {run_id}')
     plt.xscale('log')
 
+    
 def plots2_area_width(st, run_id, low = 0, high = 6, low2 = 0, high2 = 6, binning = 500):
     events = st.get_array(run_id,'event_info')
     ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
@@ -147,12 +150,21 @@ def mask_s2_area_width_aft_kr(events, run_id, area_cut, width_cut,aft_cut, plot 
     mask &= (events['s2_a_area_fraction_top'] > aft_cut[0]) & (events['s2_a_area_fraction_top'] < aft_cut[1])
     return mask
 
-def mask_s2_area_width_aft_bkg(events, run_id, area_cut, width_cut,aft_cut, plot = False,
+
+def mask_s2_area_width_aft(events, run_id, area_cut, width_cut,aft_cut, plot = False,
                                low = 1, high = 6, low2 = 2, high2 = 4.5, low3 = 0.4, high3 = 0.9, binning=500):
     ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
     phcs2 = Histdd(events['s2_area'], events['s2_area_fraction_top'],
                     bins=(np.logspace(low, high, binning), np.linspace(low3, high3, binning)))
+    livetime = (events['time'][len(events)-1]-events['time'][0])/1e9
+    mask = (events['s2_area'] > area_cut[0]) & (events['s2_area'] < area_cut[1])
+    mask &= (events['s2_range_50p_area'] > width_cut[0]) & (events['s2_range_50p_area'] < width_cut[1])
+    mask &= (events['s2_area_fraction_top'] > aft_cut[0]) & (events['s2_area_fraction_top'] < aft_cut[1])
+    all_rate = len(events)/livetime
+    mask_rate = len(events[mask])/livetime
+    start_time = datetime.fromtimestamp(events['time'][0]/1e9)
+    print(f'run {run_id}, start {start_time}, livetime {livetime:.2f} s, rate: {all_rate:.2f} Hz, selection rate: {mask_rate:.2f} Hz')
     if plot:
         plt.figure(figsize=(12,6))
         ph_s2.plot(log_scale=True, cblabel='S2 events')
@@ -170,10 +182,7 @@ def mask_s2_area_width_aft_bkg(events, run_id, area_cut, width_cut,aft_cut, plot
         plt.title(f'run {run_id}')
         plt.xscale('log')
         psu.rectangle(area_cut, aft_cut, 'r')
-    mask = (events['s2_area'] > area_cut[0]) & (events['s2_area'] < area_cut[1])
-    mask &= (events['s2_range_50p_area'] > width_cut[0]) & (events['s2_range_50p_area'] < width_cut[1])
-    mask &= (events['s2_area_fraction_top'] > aft_cut[0]) & (events['s2_area_fraction_top'] < aft_cut[1])
-    return mask
+    return mask, all_rate, mask_rate, start_time
 
 
 def plots2_area_aft(st, run_id, low = 0, high = 6, low3 = 0, high3 = 1, binning = 500):
@@ -248,7 +257,7 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot
     return vd, vd_err, cathodedt, gatedt, s2shift
 
 
-def drift_velocity_bkg(events, run_id, low = 10, high = 3000, binning = 500, plot=False):
+def drift_velocity(events, run_id, low = 10, high = 3000, binning = 500, shaping = 4, catlim = 1000, plot = False):
     if 'area_ratio' in events: pass
     else: events.insert(1, 'area_ratio', np.divide(events['cs2'],events['cs1']))
     events = events[events['area_ratio']<1e3]
@@ -256,8 +265,11 @@ def drift_velocity_bkg(events, run_id, low = 10, high = 3000, binning = 500, plo
     # cathode drop-off
     dt = np.linspace(low, high, binning)
     hdtime = Hist1d(events['drift_time']/1e3, bins=dt)
-    hfilt = gaussian_filter1d(hdtime,8)
-    cathodedt = dt[np.where(np.gradient(hfilt)==np.gradient(hfilt).min())[0][0]]
+    hfilt = gaussian_filter1d(hdtime,shaping)
+    idx = np.where(dt>catlim)[0][0]
+    hmin = np.argmin(np.gradient(hfilt[idx:]))
+    #cathodedt = dt[np.where((np.gradient(hfilt)==np.gradient(hfilt).min)&(dt[1:]>2000))[0][0]]
+    cathodedt = dt[hmin+idx]
     if plot:
         plt.figure(figsize=(12,6))
         hdtime.plot(color='b',label='data')
@@ -284,7 +296,7 @@ def drift_velocity_bkg(events, run_id, low = 10, high = 3000, binning = 500, plo
     mh_low = Histdd(events['drift_time']/1e3, events['area_ratio'],
             bins=(dts, np.linspace(0, 200, 200)),axis_names=['drift_time', 'area_ratio'])
     median = mh_low.percentile(50, axis='area_ratio')
-    mfilt = gaussian_filter1d(median, 4)
+    mfilt = gaussian_filter1d(median, shaping)
     gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
     s2shift = dts[np.where((mfilt[10:]-mfilt[50:].mean())<2)[0][0]] # beginning of flat part
     vd = 1485/(cathodedt-gatedt)
@@ -315,7 +327,6 @@ def diffusion_constant_kr(events, run_id, fit_range, vd = 600, plot = False):
     ph = Histdd(events['drift_time']/1e3, events['s2_a_range_50p_area'],
                 bins=(t, np.linspace(100, 15e3, 200)))
     perc50 = np.array(ph.percentile(percentile=50, axis=1))
-    
     D_guess = 45e3 * units.cm**2 / units.s
     w0_guess = 500 * units.ns
     vd = vd * units.mm / units.us
@@ -344,9 +355,10 @@ def diffusion_constant_kr(events, run_id, fit_range, vd = 600, plot = False):
         plt.plot(t, ys_m, label=f'$D = {popt[0]/1e3/(units.cm**2 / units.s):.2f}$ cm$^2$/s',color='r')
         plt.legend(fontsize=14)
         print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
-    return diff_const, diff_const_err, popt
+    return diff_const, diff_const_err, popt, perr
 
-def diffusion_constant_bkg(events, run_id, fit_range, vd = 600, plot = False):
+
+def diffusion_constant(events, run_id, fit_range, vd = 600, plot = False):
     # s2_width_50 vs drift_time
     t = np.linspace(0, 2400, 200)
     ph = Histdd(events['drift_time']/1e3, events['s2_range_50p_area'],
@@ -381,7 +393,8 @@ def diffusion_constant_bkg(events, run_id, fit_range, vd = 600, plot = False):
         plt.plot(t, ys_m, label=f'$D = {popt[0]/1e3/(units.cm**2 / units.s):.2f}$ cm$^2$/s',color='r')
         plt.legend(fontsize=14)
         print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
-    return diff_const, diff_const_err, popt
+    return diff_const, diff_const_err, popt, perr
+
 
 def expo(t, a, tau):
     return a*np.exp(-t/tau)
@@ -415,3 +428,19 @@ def electron_lifetime(st, run_id, area_bounds, aft_bounds, width_bounds, fit_ran
     ys = expo(t, *popt)
     plt.plot(t, ys, label=f'$EL = {popt[0]:.1f}\pm{perr[0]:.1f} ~\mu$s',color='r')
     plt.legend(fontsize=14)
+    
+    
+def diffusion_analysis_kr(st,run_kr, area_cut=(5e3,1.1e4),width_cut=(200,1.5e4),aft_cut=(0.65,0.77),
+                          radial_cut = None, fit_range=(1,1500), plot = False ):
+    run = int(run_kr)
+    events = st.get_df(run_kr,'event_info_double',progress_bar=False)
+    if(plot): plot_area_width_aft_kr(events, run_kr)
+    mask_singleS1 = mask_KrSingleS1(events)
+    if(plot): plot_area_width_aft_kr(events[mask_singleS1], run_kr)
+    e1 = events[mask_singleS1]
+    mask_awt = mask_s2_area_width_aft_kr(e1,run_kr,area_cut=area_cut,width_cut=width_cut,aft_cut=aft_cut,plot=plot)
+    e2 = events[mask_singleS1 & mask_awt]
+    if radial_cut is not None: e2 = e2[e2['r']>radial_cut]
+    vd, vd_err, cathodedt, gatedt, s2shift = drift_velocity_kr(e1, run_kr, plot=plot)
+    d, d_err, par, par_err = diffusion_constant_kr(e2,run_kr,fit_range=fit_range,vd = vd,plot=plot)
+    return run, vd, vd_err, d, d_err, cathodedt, gatedt, s2shift, par, par_err
