@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 
 
 def plot_area_width_aft_kr(events, run_id, low = 0, high = 6, low2 = 0, high2 = 1, binning = 500):
+    print('total events',len(events))
     ph_s1 = Histdd(events['s1_a_area'], events['s1_a_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(1, 6, binning)))
     ph_s2 = Histdd(events['s2_a_area'], events['s2_a_range_50p_area'],
@@ -50,6 +51,7 @@ def plot_area_width_aft_kr(events, run_id, low = 0, high = 6, low2 = 0, high2 = 
 
     
 def plot_area_width_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binning = 500):
+    print('total events',len(events))
     ph_s1 = Histdd(events['s1_area'], events['s1_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(1, 6, binning)))
     ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
@@ -63,7 +65,7 @@ def plot_area_width_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, 
     ph_s2.plot(log_scale=True, cblabel='S2 events')
     plt.xlabel("peak area (PE)", ha='right', x=1)
     plt.ylabel("peak width 50% (ns)", ha='right', y=1)
-    plt.title(f'run {run_id}')
+    plt.title(f'{run_id}')
     plt.xscale('log')
     plt.yscale('log')
     plt.figure(figsize=(12,6))
@@ -71,12 +73,13 @@ def plot_area_width_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, 
     phcs2.plot(log_scale=True, cblabel='S2 events')
     plt.xlabel("peak area (PE)", ha='right', x=1)
     plt.ylabel("area fraction top", ha='right', y=1)
-    plt.title(f'run {run_id}')
+    plt.title(f'{run_id}')
     plt.xscale('log')
 
     
 def plots2_area_width(st, run_id, low = 0, high = 6, low2 = 0, high2 = 6, binning = 500):
     events = st.get_array(run_id,'event_info')
+    print('total events',len(events))
     ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
     plt.figure(figsize=(12,6))
@@ -87,6 +90,26 @@ def plots2_area_width(st, run_id, low = 0, high = 6, low2 = 0, high2 = 6, binnin
     plt.xscale('log')
     plt.yscale('log')
 
+def plotS2_area_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binning = 500):
+    print('total events',len(events))
+    aspace = np.logspace(low, high, binning)
+    phcs2 = Histdd(events['s2_area'], events['s2_area_fraction_top'],
+                    bins=(aspace, np.linspace(0, 1, binning)))
+    plt.figure(figsize=(12,6))
+    phcs2.plot(log_scale=True, cblabel='S2 events')
+    plt.xlabel("peak area (PE)", ha='right', x=1)
+    plt.ylabel("area fraction top", ha='right', y=1)
+    plt.title(f'run {run_id}')
+    plt.xscale('log')
+    a = np.logspace(2, 6.5, 201)
+    _a = np.clip(a, 0, 1e3)
+    mu = 0.725
+    b = beta.isf(0.0001, ((_a * mu) / 1.2).astype(int),((_a - _a * mu) / 1.2).astype(int))
+    c = beta.isf(0.9999, ((_a * mu) / 1.2).astype(int),((_a - _a * mu) / 1.2).astype(int))
+    aft_ul = interp1d(a, b, bounds_error=False, fill_value='extrapolate')
+    aft_ll = interp1d(a, c, bounds_error=False, fill_value='extrapolate')
+    plt.plot(a,aft_ul(a),'r--')
+    plt.plot(a,aft_ll(a),'r--')
     
 def mask_KrSingleS1(df):
     def line(x):
@@ -124,6 +147,7 @@ def mask_KrDouble(df,doubleS2=False):
 
 def mask_s2_area_width_aft_kr(events, run_id, area_cut, width_cut,aft_cut, plot = False,
                               low = 1, high = 6, low2 = 2, high2 = 4.5, low3 = 0.4, high3 = 0.9, binning=500):
+    print('total events',len(events))
     ph_s2 = Histdd(events['s2_a_area'], events['s2_a_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
     phcs2 = Histdd(events['s2_a_area'], events['s2_a_area_fraction_top'],
@@ -153,6 +177,7 @@ def mask_s2_area_width_aft_kr(events, run_id, area_cut, width_cut,aft_cut, plot 
 
 def mask_s2_area_width_aft(events, run_id, area_cut, width_cut,aft_cut, plot = False,
                                low = 1, high = 6, low2 = 2, high2 = 4.5, low3 = 0.4, high3 = 0.9, binning=500):
+    print('total events',len(events))
     ph_s2 = Histdd(events['s2_area'], events['s2_range_50p_area'],
                     bins=(np.logspace(low, high, binning), np.logspace(low2, high2, binning)))
     phcs2 = Histdd(events['s2_area'], events['s2_area_fraction_top'],
@@ -187,6 +212,7 @@ def mask_s2_area_width_aft(events, run_id, area_cut, width_cut,aft_cut, plot = F
 
 def plots2_area_aft(st, run_id, low = 0, high = 6, low3 = 0, high3 = 1, binning = 500):
     events = st.get_array(run_id,'event_info')
+    print('total events',len(events))
     phcs2 = Histdd(events['s2_area'], events['s2_area_fraction_top'],
                     bins=(np.logspace(low, high, binning), np.linspace(low3, high3, binning)))
     plt.figure(figsize=(12,6))
@@ -444,3 +470,13 @@ def diffusion_analysis_kr(st,run_kr, area_cut=(5e3,1.1e4),width_cut=(200,1.5e4),
     vd, vd_err, cathodedt, gatedt, s2shift = drift_velocity_kr(e1, run_kr, plot=plot)
     d, d_err, par, par_err = diffusion_constant_kr(e2,run_kr,fit_range=fit_range,vd = vd,plot=plot)
     return run, vd, vd_err, d, d_err, cathodedt, gatedt, s2shift, par, par_err
+
+
+def diffusion_analysis(st, run_id, area_cut=(1e4,5e6), fit_range=(1,1500), plot = False ):
+    events = st.get_df(run_id,'event_info',progress_bar=False)
+    if(plot): plot_area_width_aft(events, run_id)
+    mask_awt = mask_s2_area_width_aft(events,run_id,area_cut,width_cut=(200,1.5e4),aft_cut=(0.65,0.77),high=7,plot=plot)
+    e1 = events[mask_awt[0]]
+    vd, vd_err, cathodedt, gatedt, s2shift = drift_velocity(e1, run_id, low=100,catlim=2000, plot=plot)
+    d, d_err, par, par_err = diffusion_constant(e1,run_id,fit_range=(200,1500),vd = vd,plot=plot)
+    return int(run_id), vd, vd_err, d, d_err, par, par_err
