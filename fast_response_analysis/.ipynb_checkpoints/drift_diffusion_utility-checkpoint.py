@@ -114,7 +114,7 @@ def plotS2_area_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binn
 def mask_KrSingleS1(df):
     def line(x):
         return 0.55 * x + 15
-    mask = (df['ds_s1_dt'] == 0)
+    mask = (df['ds_s1_dt'] <= 0)
     mask &= (df['s1_a_n_channels'] >= 90) & (df['s1_a_n_channels'] < 225)
     mask &= (line(df['s1_a_area']) > df['s1_a_n_channels'])
     mask &= (df['s1_a_range_50p_area'] >= 60) & (df['s1_a_range_50p_area'] < 1000)
@@ -480,3 +480,107 @@ def diffusion_analysis(st, run_id, area_cut=(1e4,5e6), fit_range=(1,1500), plot 
     vd, vd_err, cathodedt, gatedt, s2shift = drift_velocity(e1, run_id, low=100,catlim=2000, plot=plot)
     d, d_err, par, par_err = diffusion_constant(e1,run_id,fit_range=(200,1500),vd = vd,plot=plot)
     return int(run_id), vd, vd_err, d, d_err, par, par_err
+
+def kr_drift_diffusion_analysis(kr_runs):
+    nn = len(kr_runs)
+    runs, vd, vd_err = np.zeros(nn), np.zeros(nn), np.zeros(nn)
+    d, d_err, w0, w0_err = np.zeros(nn), np.zeros(nn), np.zeros(nn), np.zeros(nn)
+    cc, gg, ss = np.zeros(nn), np.zeros(nn), np.zeros(nn)
+    for i, run in enumerate(kr_runs):
+        runs[i], vd[i], vd_err[i], d[i], d_err[i], cc[i], gg[i], ss[i], par, par_err = diffusion_analysis_kr(st,run, area_cut=(4e3,1.2e4))
+        w0[i], w0_err[i] = par[1]/units.ns, par_err[1]/units.ns
+        print(f'run {run}, vD = {vd[i]:.3f} +/- {vd_err[i]:.3f} mm/us, D = {d[i]:.2f} +/- {d_err[i]:.2f} cm2/s, w0 = {w0[i]:.2f} +/- {w0_err[i]:.2f} ns')
+    # plot diffusion vs runs
+    plt.figure(figsize=(12,6))
+    plt.xlabel("run", ha='right', x=1,fontsize=14)
+    plt.ylabel("diffusion constant (cm$^2$/s)", ha='right', y=1,fontsize=14)
+    plt.errorbar(runs, d, yerr = d_err, fmt='s',c='b',label='diffusion constant')
+    mean1 = d[d>0].mean()
+    std1 = d[d>0].std()/np.sqrt(np.size(d))+d_err[d>0].mean()
+    plt.axhline(mean1,color='r',label=f'$D = {mean1:.2f} \pm {std1:.2f}$ cm$^2$/s')
+    #plt.xticks(rint)
+    #plt.ylim(41,45)
+    plt.legend(fontsize=14)
+    
+    ### cathode drop-off
+    plt.figure(figsize=(12,6))
+    plt.xlabel("run", ha='right', x=1,fontsize=14)
+    plt.ylabel("cathode drift time ($\mu$s)", ha='right', y=1,fontsize=14)
+    plt.errorbar(runs,cc,yerr=10,fmt='s',color='b',label='cathode drift time')
+    cm1, cs1 = cc.mean(), cc.std()/np.sqrt(np.size(cc))
+    plt.axhline(cm1, color='r',label=f'$cathode = {cm1:.1f} \pm {cs1:.1f}$ mm/$\mu$s')
+    #plt.ylim(2320,2400)
+    #plt.xticks(rint)
+    plt.legend(fontsize=14)
+
+    ### gate drift time
+    plt.figure(figsize=(12,6))
+    plt.xlabel("run", ha='right', x=1,fontsize=14)
+    plt.ylabel("gate drift time ($\mu$s)", ha='right', y=1,fontsize=14)
+    plt.errorbar(runs,gg,yerr=1,fmt='s',color='g',label='gate drift time')
+    gm1, gs1 = gg[gg>0].mean(), (gg[gg>0].max()-gg[gg>0].min())/2
+    plt.axhline(gm1,color='r',label=f'$gate = {gm1:.1f} \pm {gs1:.1f}$ mm/$\mu$s')
+    plt.legend(fontsize=14)
+    #plt.xticks(rint)
+    #plt.ylim(1,5)
+
+    ### S2 shift time
+    plt.figure(figsize=(12,6))
+    plt.xlabel("run", ha='right', x=1,fontsize=14)
+    plt.ylabel("S2 shifted time ($\mu$s)", ha='right', y=1,fontsize=14)
+    plt.errorbar(runs,ss,yerr=1,fmt='s',color='violet',label='S2 shifted time')
+    sme1, sst1 = ss[ss>0].mean(), (ss[ss>0].max()-ss[ss>0].min())/2
+    plt.axhline(sme1,color='r',label=f'$S2 shift = {sme1:.1f} \pm {sst1:.1f}$ mm/$\mu$s')
+    plt.legend(fontsize=14)
+    #plt.xticks(rint)
+    #plt.ylim(3,8)
+
+    # drift velocity
+    plt.figure(figsize=(12,6))
+    plt.xlabel("run", ha='right', x=1,fontsize=14)
+    plt.ylabel("drift velocity (mm/$\mu$s)", ha='right', y=1,fontsize=14)
+    plt.errorbar(runs,vd,yerr=vd_err,fmt='s',color='r',label='drift velocity')
+    m1 = vd[vd>0].mean()
+    s1 = vd[vd>0].std()/np.sqrt(np.size(vd))+vd_err[vd>0].mean()+vd_err[vd>0].mean()
+    plt.axhline(m1,color='r',label=f'$v_D = {m1:.3f} \pm {s1:.3f}$ mm/$\mu$s')
+    #plt.ylim(0.62,0.64)
+    #plt.xticks(rint)
+    plt.legend(fontsize=14)
+    
+    # w0
+    ### S2 shift time
+    plt.figure(figsize=(12,6))
+    plt.xlabel("run", ha='right', x=1,fontsize=14)
+    plt.ylabel("w0 (ns)", ha='right', y=1,fontsize=14)
+    plt.errorbar(runs,w0,yerr=w0_err,fmt='s',color='g',label='w0')
+    w0m, w0s = w0[w0>0].mean(), (w0[w0>0].max()-w0[w0>0].min())/2
+    plt.axhline(w0m,color='r',label=f'$w0 = {w0m:.1f} \pm {w0s:.1f}$ ns')
+    plt.legend(fontsize=14)
+    return mean1, std1, m1, s1, w0m,w0s
+
+def merge_runs_kr(st,runs):
+    ev0 = st.get_df(runs[0],['event_info_double',
+                             'cut_s1_max_pmt',
+                             'cut_s1_area_fraction_top',
+                             'cut_s2_single_scatter',
+                             'cut_s2_width_naive',
+                             'cut_fiducial_volume',
+                             'cut_daq_veto',
+                             'cut_Kr_SingleS1S2',
+                             'cut_Kr_DoubleS1_SingleS2'],progress_bar=False)
+    print('Reading runs from',runs[-1],'to',runs[0])
+    start = time.time()
+    for i, run_id in enumerate(runs[1:]):
+        if ((i+1)%5) == 0: print(f'n. {i} run {run_id} elapsed time: {time.time()-start:.2f} s')
+        ev_temp = st.get_df(run_id,['event_info_double',
+                             'cut_s1_max_pmt',
+                             'cut_s1_area_fraction_top',
+                             'cut_s2_single_scatter',
+                             'cut_s2_width_naive',
+                             'cut_fiducial_volume',
+                             'cut_daq_veto',
+                             'cut_Kr_SingleS1S2',
+                             'cut_Kr_DoubleS1_SingleS2'],progress_bar=False)
+        frames = [ev0,ev_temp]
+        ev0 = pd.concat(frames)
+    return ev0

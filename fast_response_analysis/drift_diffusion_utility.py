@@ -114,7 +114,7 @@ def plotS2_area_aft(events, run_id, low = 0, high = 7, low2 = 0, high2 = 1, binn
 def mask_KrSingleS1(df):
     def line(x):
         return 0.55 * x + 15
-    mask = (df['ds_s1_dt'] == 0)
+    mask = (df['ds_s1_dt'] <= 0)
     mask &= (df['s1_a_n_channels'] >= 90) & (df['s1_a_n_channels'] < 225)
     mask &= (line(df['s1_a_area']) > df['s1_a_n_channels'])
     mask &= (df['s1_a_range_50p_area'] >= 60) & (df['s1_a_range_50p_area'] < 1000)
@@ -456,7 +456,7 @@ def electron_lifetime(st, run_id, area_bounds, aft_bounds, width_bounds, fit_ran
     plt.legend(fontsize=14)
     
     
-def diffusion_analysis_kr(st,run_kr, area_cut=(5e3,1.1e4),width_cut=(200,1.5e4),aft_cut=(0.65,0.77),
+def diffusion_analysis_kr_old(st,run_kr, area_cut=(5e3,1.1e4),width_cut=(200,1.5e4),aft_cut=(0.65,0.77),
                           radial_cut = None, fit_range=(1,1500), plot = False ):
     run = int(run_kr)
     events = st.get_df(run_kr,'event_info_double',progress_bar=False)
@@ -480,3 +480,32 @@ def diffusion_analysis(st, run_id, area_cut=(1e4,5e6), fit_range=(1,1500), plot 
     vd, vd_err, cathodedt, gatedt, s2shift = drift_velocity(e1, run_id, low=100,catlim=2000, plot=plot)
     d, d_err, par, par_err = diffusion_constant(e1,run_id,fit_range=(200,1500),vd = vd,plot=plot)
     return int(run_id), vd, vd_err, d, d_err, par, par_err
+
+# new code Oct 2021
+
+def merge_runs_kr(st,runs):
+    ev0 = st.get_df(runs[0],['event_info_double',
+                             'cut_s1_max_pmt',
+                             'cut_s1_area_fraction_top',
+                             'cut_s2_single_scatter',
+                             'cut_s2_width_naive',
+                             'cut_fiducial_volume',
+                             'cut_daq_veto',
+                             'cut_Kr_SingleS1S2',
+                             'cut_Kr_DoubleS1_SingleS2'],progress_bar=False)
+    print('Reading runs from',runs[-1],'to',runs[0])
+    start = time.time()
+    for i, run_id in enumerate(runs[1:]):
+        if ((i+1)%5) == 0: print(f'n. {i} run {run_id} elapsed time: {time.time()-start:.2f} s')
+        ev_temp = st.get_df(run_id,['event_info_double',
+                             'cut_s1_max_pmt',
+                             'cut_s1_area_fraction_top',
+                             'cut_s2_single_scatter',
+                             'cut_s2_width_naive',
+                             'cut_fiducial_volume',
+                             'cut_daq_veto',
+                             'cut_Kr_SingleS1S2',
+                             'cut_Kr_DoubleS1_SingleS2'],progress_bar=False)
+        frames = [ev0,ev_temp]
+        ev0 = pd.concat(frames)
+    return ev0

@@ -458,66 +458,7 @@ def s2_width_norm(width,s2_width_model):
     normWidth = (np.square(width) - np.square(scw)) / np.square(s2_width_model)
     return normWidth
 
-def S2WidthNormalized(events, title, mod_par = (45, 0.675, 3), wrange = (0,10), perc = (1,99), delta=0.25, plot=False ):
-    
-    s2width = events['s2_range_50p_area']
-    drift = events['drift_time']/1e3
-    s2area = events['s2_area']
-    
-    D_mod = mod_par[0]*1e3 * units.cm**2 / units.s
-    vd_mod = mod_par[1] * units.mm / units.us
-    tG_mod = mod_par[2] * units.ns
-    normWidth = s2_width_norm(events['s2_range_50p_area'],s2_width_model(events['drift_time']/1e3, D_mod, vd_mod, tG_mod))
-    aspace, aspace0 = np.logspace(2, 6.5, 300), np.logspace(2, 6.5, 30)
-    
-    low_cut1 = line(np.log10(aspace),0,0.25)
-    s2width_lcut1 = interp1d(aspace, low_cut1, bounds_error=False, fill_value='extrapolate',kind='cubic')
-    cut1 = np.ones(len(events), dtype=bool)
-    cut1 &= normWidth > s2width_lcut1(events['s2_area'])
-    events =  events[cut1]
-    
-    nspace = np.linspace(wrange[0], wrange[1], 300)
-    normWidth = s2_width_norm(events['s2_range_50p_area'],s2_width_model(events['drift_time']/1e3, D_mod, vd_mod, tG_mod))
-    pha = Histdd(events['s2_area'], normWidth, bins=(aspace, nspace))
-    pha0 = Histdd(events['s2_area'], normWidth, bins=(aspace0, nspace))
-    perc90a = np.array(pha0.percentile(percentile=perc[1], axis=1))
-    perc10a = np.array(pha0.percentile(percentile=perc[0], axis=1))
-    aspace1, aspace2 = np.logspace(2, 3.5, 100), np.logspace(3.5,6.5, 200)
-    # limits
-    low_cut =  np.concatenate((line(np.log10(aspace1),(1-delta)/1.5,(2*delta-2)/1.5),
-                               1-delta + 0*np.log10(aspace2)))
-    high_cut = np.concatenate((line(np.log10(aspace1),(delta-1)/1.5,(5-2*delta)/1.5),
-                               1+delta + 0*np.log10(aspace2)))
-    s2width_lcut = interp1d(aspace, low_cut, bounds_error=False, fill_value='extrapolate',kind='cubic')
-    s2width_hcut = interp1d(aspace, high_cut, bounds_error=False, fill_value='extrapolate',kind='cubic')
-    aa0 = (aspace0[1:]+aspace0[:-1])/2
-    s2width_lperc = interp1d(aa0, perc10a, bounds_error=False, fill_value='extrapolate',kind='cubic')
-    s2width_hperc = interp1d(aa0, perc90a, bounds_error=False, fill_value='extrapolate',kind='cubic')
-    
-    cut = np.ones(len(events), dtype=bool)
-    cut &= normWidth < s2width_hcut(events['s2_area'])
-    cut &= normWidth > s2width_lcut(events['s2_area'])
-    cutp = np.ones(len(events), dtype=bool)
-    cutp &= normWidth < s2width_hperc(events['s2_area'])
-    cutp &= normWidth > s2width_lperc(events['s2_area'])
-    perc1 = len(events[cut])/len(events)*100
-    perc2 = len(events[cutp])/len(events)*100
-    print(f'Total events {len(events)}')
-    print(f'Cut with percentile: survived events {len(events[cutp])} -> {perc2:.2f}%')
-    print(f'Cut with lines: survived events {len(events[cut])} -> {perc1:.2f}%')
-    if plot:
-        plt.figure(figsize=(12,6))
-        pha.plot(log_scale=True, cblabel='events')
-        plt.axhline(y=1,c='black',ls='-',label='model from Kr-83m')
-        plt.plot(aa0, perc90a, 'b--', label=f'{perc[0]}-{perc[1]}% percentile: {perc2:.2f}%')
-        plt.xlabel("S2 area (PE)", ha='right', x=1,fontsize=12)
-        plt.ylabel("Normalized S2 width 50% (ns)", ha='right', y=1,fontsize=12)
-        plt.title(f'{title}',fontsize=14)
-        plt.xscale('log')
-        plt.plot(aspace, s2width_lcut(aspace),'r--',label=f'cut limits: {perc1:.2f}%')
-        plt.plot(aspace, s2width_hcut(aspace),'r--')
-        plt.legend(fontsize=14)
-    return cut, cutp
+
 
 def S2WidthNormLine(events, title, mod_par = (45, 0.675, 3), wrange = (0,10), ll = 0, hh = 2, plot=False ):
     
@@ -643,3 +584,10 @@ def S2WidthNormalized_drift(events, title, mod_par = (45, 0.675, 3), wrange = (0
         plt.title(f'{title}',fontsize=14)
         #plt.xscale('log')
         #plt.legend(fontsize=14)
+        
+def cutevents_wires(ev, FV = False):
+    cut=(ev['cut_s1_max_pmt']) & (ev['cut_daq_veto']) & (ev['cut_s1_area_fraction_top']) & (ev['cut_s2_single_scatter'])
+    mask = basic_cuts(ev) & cut
+    if FV: mask = mask & ev['cut_fiducial_volume']
+    maskNW, maskFW = mask_events_near_wire(ev)
+    return ev[mask], ev[mask&maskNW], ev[mask&maskFW]

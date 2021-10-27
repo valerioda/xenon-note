@@ -584,3 +584,10 @@ def S2WidthNormalized_drift(events, title, mod_par = (45, 0.675, 3), wrange = (0
         plt.title(f'{title}',fontsize=14)
         #plt.xscale('log')
         #plt.legend(fontsize=14)
+        
+def cutevents_wires(ev, FV = False):
+    cut=(ev['cut_s1_max_pmt']) & (ev['cut_daq_veto']) & (ev['cut_s1_area_fraction_top']) & (ev['cut_s2_single_scatter'])
+    mask = basic_cuts(ev) & cut
+    if FV: mask = mask & ev['cut_fiducial_volume']
+    maskNW, maskFW = mask_events_near_wire(ev)
+    return ev[mask], ev[mask&maskNW], ev[mask&maskFW]
