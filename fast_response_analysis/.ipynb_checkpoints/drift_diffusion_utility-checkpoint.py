@@ -2,6 +2,7 @@ import sys
 import os.path as osp
 
 from copy import deepcopy
+import time
 import datetime
 import os
 import pickle
@@ -224,16 +225,18 @@ def plots2_area_aft(st, run_id, low = 0, high = 6, low3 = 0, high3 = 1, binning 
     #plt.yscale('log')
 
 
-def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot=False):
+def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, w=8, plot=False):
     if 'area_ratio' in events: pass
     else: events.insert(1, 'area_ratio', np.divide(events['cs2_a'],events['cs1_a']))
     events = events[events['area_ratio']<1e3]
     
     # cathode drop-off
     dt = np.linspace(low, high, binning)
+    dtc = (dt[:-1] + dt[1:])/2.
     hdtime = Hist1d(events['drift_time']/1e3, bins=dt)
-    hfilt = gaussian_filter1d(hdtime,8)
-    cathodedt = dt[np.where(np.gradient(hfilt)==np.gradient(hfilt).min())[0][0]]
+    hfilt = gaussian_filter1d(hdtime,w)
+    catdt = dtc[np.where(np.gradient(hfilt)==np.gradient(hfilt).min())[0]]
+    cathodedt = np.mean(catdt)
     
     if plot:
         plt.figure(figsize=(12,6))
@@ -242,10 +245,18 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot
         plt.xlabel("drift time ($\mu$s)", ha='right', x=1)
         plt.title(f'run {run_id}',fontsize=14)
         plt.axvline(x=cathodedt,linewidth=1,linestyle='-', color='r',label=f'$cathode = {cathodedt:.1f}~\mu$s')
+        plt.plot(dtc,hfilt,label='filtered')
+        plt.xlim(2100,2300)
         plt.legend(fontsize=14)
+        
+        #plt.figure(figsize=(12,6))
+        #plt.plot(dtc,np.gradient(hfilt),label='diff. filtered')
+        #plt.axvline(x=cathodedt,linewidth=1,linestyle='-', color='r',label=f'$cathode = {cathodedt:.1f}~\mu$s')
+        #plt.legend(fontsize=14)
+        #plt.xlim(2100,2300)
 
     mh = Histdd(events['drift_time']/1e3, events['area_ratio'],
-            bins=(np.linspace(low, high, binning), np.logspace(0, 5, 200)))
+            bins=(np.linspace(low, high, binning), np.logspace(0, 3, 200)))
     
     if plot:
         plt.figure(figsize=(12,6))
@@ -254,17 +265,21 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot
         plt.ylabel("cS2/cS1", ha='right', y=1,fontsize=12)
         plt.title(f'run {run_id}',fontsize=14)
         plt.yscale('log')
-        plt.xlim(1500,high)
+        plt.xlim(1500,2500)
         plt.axvline(x=cathodedt,linewidth=1,linestyle='-', color='r',label=f'$cathode = {cathodedt:.1f}~\mu$s')
+        #plt.legend(fontsize=14)
     
     # gate drift time
-    dts = np.linspace(1, 20, 200)
+    dts = np.linspace(0, 20, 200)
+    dtsc = (dts[:-1] + dts[1:])/2.
     mh_low = Histdd(events['drift_time']/1e3, events['area_ratio'],
-            bins=(dts, np.linspace(0, 200, 200)),axis_names=['drift_time', 'area_ratio'])
+            bins=(dts, np.linspace(0, 100, 200)),axis_names=['drift_time', 'area_ratio'])
     median = mh_low.percentile(50, axis='area_ratio')
     mfilt = gaussian_filter1d(median, 4)
-    gatedt = dts[np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]] #maximum slope
-    s2shift = dts[np.where((mfilt[10:]-mfilt[50:].mean())<2)[0][0]] # beginning of flat part
+    gateidx = np.where(np.gradient(mfilt)==np.gradient(mfilt).min())[0][0]
+    gatedt = dts[gateidx] #maximum slope
+    s2shiftidx = np.where((mfilt[gateidx:]-mfilt[-100:].mean())<3*mfilt[-100:].std())[0][0]
+    s2shift = dts[s2shiftidx+gateidx] # beginning of flat part
     vd = 1485/(cathodedt-gatedt)
     vd_err = vd*(10/cathodedt)
     if plot:
@@ -274,13 +289,14 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, plot
         plt.ylabel("cS2/cS1", ha='right', y=1,fontsize=12)
         plt.title(f'run {run_id}',fontsize=14)
         median.plot(label='median')
-        plt.plot(dts[1:],mfilt,label='filtered median')
+        plt.plot(dtsc,mfilt,label='filtered median')
         plt.axvline(x=s2shift,linewidth=1,linestyle='--',color='violet',label=f'$S2~shift = {s2shift:.1f}~\mu$s')
         plt.axvline(x=gatedt,linewidth=1,linestyle='--',color='r',label=f'$gate = {gatedt:.1f}~\mu$s')
         plt.axhline(y=mfilt[50:].mean(),color='b',label='mean')
         plt.legend(fontsize=14)
-        print(f'Drift velocity = {vd:.3f}~mm/$\mu$s')
+        print(f'Drift velocity = {vd:.3f} +/- {vd_err:.3f} mm/us')
     return vd, vd_err, cathodedt, gatedt, s2shift
+
 
 
 def drift_velocity(events, run_id, low = 10, high = 3000, binning = 500, shaping = 4, catlim = 1000, plot = False):
@@ -342,33 +358,39 @@ def drift_velocity(events, run_id, low = 10, high = 3000, binning = 500, shaping
     return vd, vd_err, cathodedt, gatedt, s2shift
 
 
-def diffusion_model(t, D, vd, w0):
-    sigma_to_r50p = stats.norm.ppf(0.75) - stats.norm.ppf(0.25)        
-    return np.sqrt(2 * sigma_to_r50p**2 * D * t / vd**2 + w0**2)
+#def diffusion_model(t, D, vd, w0):
+#    sigma_to_r50p = stats.norm.ppf(0.75) - stats.norm.ppf(0.25)        
+#    return np.sqrt(2 * sigma_to_r50p**2 * D * t / vd**2 + w0**2)
+
+def diffusion_model(t, D, vd, tGate):
+    sigma_to_r50p = stats.norm.ppf(0.75) - stats.norm.ppf(0.25)
+    return sigma_to_r50p * np.sqrt(2 * D * (t-tGate) / vd**2)
 
 
 def diffusion_constant_kr(events, run_id, fit_range, vd = 600, plot = False):
     # s2_width_50 vs drift_time
     t = np.linspace(0, 2400, 200)
-    ph = Histdd(events['drift_time']/1e3, events['s2_a_range_50p_area'],
-                bins=(t, np.linspace(100, 15e3, 200)))
+    dt = events['drift_time']/1e3 # drift time in us
+    ph = Histdd(dt, events['s2_a_range_50p_area'],bins=(t, np.linspace(100, 15e3, 200)))
     perc50 = np.array(ph.percentile(percentile=50, axis=1))
-    D_guess = 45e3 * units.cm**2 / units.s
-    w0_guess = 500 * units.ns
+    D_guess = 45 * units.cm**2 / units.s * 1e3
+    tGate_guess = 5 * units.us / 1e3
     vd = vd * units.mm / units.us
-    guess = np.array([D_guess, vd, w0_guess])
+    guess = np.array([D_guess, vd, tGate_guess])
     ys_m = diffusion_model(t, *guess)
     ll = np.where(t>fit_range[0])[0][0]
     hh = np.where(t>fit_range[1])[0][0]
-    diffusion = lambda x, D, w0: diffusion_model(x, D, vd, w0)
-    popt, pcov = curve_fit(diffusion, t[ll:hh], perc50[ll:hh], p0=(D_guess, w0_guess))
+    diffusion = lambda x, D, tGate: diffusion_model(x, D, vd, tGate)
+    
+    popt, pcov = curve_fit(diffusion, t[ll:hh], perc50[ll:hh], p0=(D_guess, tGate_guess))
     perr = np.sqrt(np.diag(pcov))
     
     ys_u = diffusion(t, *popt) + 1000
     ys_m = diffusion(t, *popt)
     ys_d = diffusion(t, *popt) - 1000
-    diff_const = popt[0]/1e3/(units.cm**2 / units.s)
-    diff_const_err = perr[0]/1e3/(units.cm**2 / units.s)
+    
+    diff_const = popt[0]/(units.cm**2 / units.s)/1e3
+    diff_const_err = perr[0]/(units.cm**2 / units.s)/1e3
     
     if plot:
         plt.figure(figsize=(12,6))
@@ -378,9 +400,10 @@ def diffusion_constant_kr(events, run_id, fit_range, vd = 600, plot = False):
         plt.title(f'run {run_id}',fontsize=14)
         plt.plot(t[:len(perc50)], perc50, color='b',linestyle='--', label='50% percentile')
         plt.axvspan(*fit_range, alpha=0.1, color='blue', label='fit region')
-        plt.plot(t, ys_m, label=f'$D = {popt[0]/1e3/(units.cm**2 / units.s):.2f}$ cm$^2$/s',color='r')
+        plt.plot(t, ys_m, label=f'$D = {diff_const:.2f} \pm {diff_const_err:.2f}$ cm$^2$/s',color='r')
+        #plt.plot(t, diffusion_model(t, *guess), label='guess',color='m')
         plt.legend(fontsize=14)
-        print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm$^2$/s ')
+        print(f'Diffusion constant = {diff_const:.2f} +/- {diff_const_err:.2f} cm2/s, tGate = {popt[1]:.2f} us')
     return diff_const, diff_const_err, popt, perr
 
 
@@ -456,7 +479,7 @@ def electron_lifetime(st, run_id, area_bounds, aft_bounds, width_bounds, fit_ran
     plt.legend(fontsize=14)
     
     
-def diffusion_analysis_kr(st,run_kr, area_cut=(5e3,1.1e4),width_cut=(200,1.5e4),aft_cut=(0.65,0.77),
+def diffusion_analysis_kr_old(st,run_kr, area_cut=(5e3,1.1e4),width_cut=(200,1.5e4),aft_cut=(0.65,0.77),
                           radial_cut = None, fit_range=(1,1500), plot = False ):
     run = int(run_kr)
     events = st.get_df(run_kr,'event_info_double',progress_bar=False)
@@ -481,89 +504,11 @@ def diffusion_analysis(st, run_id, area_cut=(1e4,5e6), fit_range=(1,1500), plot 
     d, d_err, par, par_err = diffusion_constant(e1,run_id,fit_range=(200,1500),vd = vd,plot=plot)
     return int(run_id), vd, vd_err, d, d_err, par, par_err
 
-def kr_drift_diffusion_analysis(kr_runs):
-    nn = len(kr_runs)
-    runs, vd, vd_err = np.zeros(nn), np.zeros(nn), np.zeros(nn)
-    d, d_err, w0, w0_err = np.zeros(nn), np.zeros(nn), np.zeros(nn), np.zeros(nn)
-    cc, gg, ss = np.zeros(nn), np.zeros(nn), np.zeros(nn)
-    for i, run in enumerate(kr_runs):
-        runs[i], vd[i], vd_err[i], d[i], d_err[i], cc[i], gg[i], ss[i], par, par_err = diffusion_analysis_kr(st,run, area_cut=(4e3,1.2e4))
-        w0[i], w0_err[i] = par[1]/units.ns, par_err[1]/units.ns
-        print(f'run {run}, vD = {vd[i]:.3f} +/- {vd_err[i]:.3f} mm/us, D = {d[i]:.2f} +/- {d_err[i]:.2f} cm2/s, w0 = {w0[i]:.2f} +/- {w0_err[i]:.2f} ns')
-    # plot diffusion vs runs
-    plt.figure(figsize=(12,6))
-    plt.xlabel("run", ha='right', x=1,fontsize=14)
-    plt.ylabel("diffusion constant (cm$^2$/s)", ha='right', y=1,fontsize=14)
-    plt.errorbar(runs, d, yerr = d_err, fmt='s',c='b',label='diffusion constant')
-    mean1 = d[d>0].mean()
-    std1 = d[d>0].std()/np.sqrt(np.size(d))+d_err[d>0].mean()
-    plt.axhline(mean1,color='r',label=f'$D = {mean1:.2f} \pm {std1:.2f}$ cm$^2$/s')
-    #plt.xticks(rint)
-    #plt.ylim(41,45)
-    plt.legend(fontsize=14)
-    
-    ### cathode drop-off
-    plt.figure(figsize=(12,6))
-    plt.xlabel("run", ha='right', x=1,fontsize=14)
-    plt.ylabel("cathode drift time ($\mu$s)", ha='right', y=1,fontsize=14)
-    plt.errorbar(runs,cc,yerr=10,fmt='s',color='b',label='cathode drift time')
-    cm1, cs1 = cc.mean(), cc.std()/np.sqrt(np.size(cc))
-    plt.axhline(cm1, color='r',label=f'$cathode = {cm1:.1f} \pm {cs1:.1f}$ mm/$\mu$s')
-    #plt.ylim(2320,2400)
-    #plt.xticks(rint)
-    plt.legend(fontsize=14)
-
-    ### gate drift time
-    plt.figure(figsize=(12,6))
-    plt.xlabel("run", ha='right', x=1,fontsize=14)
-    plt.ylabel("gate drift time ($\mu$s)", ha='right', y=1,fontsize=14)
-    plt.errorbar(runs,gg,yerr=1,fmt='s',color='g',label='gate drift time')
-    gm1, gs1 = gg[gg>0].mean(), (gg[gg>0].max()-gg[gg>0].min())/2
-    plt.axhline(gm1,color='r',label=f'$gate = {gm1:.1f} \pm {gs1:.1f}$ mm/$\mu$s')
-    plt.legend(fontsize=14)
-    #plt.xticks(rint)
-    #plt.ylim(1,5)
-
-    ### S2 shift time
-    plt.figure(figsize=(12,6))
-    plt.xlabel("run", ha='right', x=1,fontsize=14)
-    plt.ylabel("S2 shifted time ($\mu$s)", ha='right', y=1,fontsize=14)
-    plt.errorbar(runs,ss,yerr=1,fmt='s',color='violet',label='S2 shifted time')
-    sme1, sst1 = ss[ss>0].mean(), (ss[ss>0].max()-ss[ss>0].min())/2
-    plt.axhline(sme1,color='r',label=f'$S2 shift = {sme1:.1f} \pm {sst1:.1f}$ mm/$\mu$s')
-    plt.legend(fontsize=14)
-    #plt.xticks(rint)
-    #plt.ylim(3,8)
-
-    # drift velocity
-    plt.figure(figsize=(12,6))
-    plt.xlabel("run", ha='right', x=1,fontsize=14)
-    plt.ylabel("drift velocity (mm/$\mu$s)", ha='right', y=1,fontsize=14)
-    plt.errorbar(runs,vd,yerr=vd_err,fmt='s',color='r',label='drift velocity')
-    m1 = vd[vd>0].mean()
-    s1 = vd[vd>0].std()/np.sqrt(np.size(vd))+vd_err[vd>0].mean()+vd_err[vd>0].mean()
-    plt.axhline(m1,color='r',label=f'$v_D = {m1:.3f} \pm {s1:.3f}$ mm/$\mu$s')
-    #plt.ylim(0.62,0.64)
-    #plt.xticks(rint)
-    plt.legend(fontsize=14)
-    
-    # w0
-    ### S2 shift time
-    plt.figure(figsize=(12,6))
-    plt.xlabel("run", ha='right', x=1,fontsize=14)
-    plt.ylabel("w0 (ns)", ha='right', y=1,fontsize=14)
-    plt.errorbar(runs,w0,yerr=w0_err,fmt='s',color='g',label='w0')
-    w0m, w0s = w0[w0>0].mean(), (w0[w0>0].max()-w0[w0>0].min())/2
-    plt.axhline(w0m,color='r',label=f'$w0 = {w0m:.1f} \pm {w0s:.1f}$ ns')
-    plt.legend(fontsize=14)
-    return mean1, std1, m1, s1, w0m,w0s
-
 def merge_runs_kr(st,runs):
     ev0 = st.get_df(runs[0],['event_info_double',
                              'cut_s1_max_pmt',
                              'cut_s1_area_fraction_top',
                              'cut_s2_single_scatter',
-                             'cut_s2_width_naive',
                              'cut_fiducial_volume',
                              'cut_daq_veto',
                              'cut_Kr_SingleS1S2',
@@ -576,7 +521,6 @@ def merge_runs_kr(st,runs):
                              'cut_s1_max_pmt',
                              'cut_s1_area_fraction_top',
                              'cut_s2_single_scatter',
-                             'cut_s2_width_naive',
                              'cut_fiducial_volume',
                              'cut_daq_veto',
                              'cut_Kr_SingleS1S2',
