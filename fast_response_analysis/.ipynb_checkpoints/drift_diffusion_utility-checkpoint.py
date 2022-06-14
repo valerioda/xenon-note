@@ -227,7 +227,8 @@ def plots2_area_aft(st, run_id, low = 0, high = 6, low3 = 0, high3 = 1, binning 
 
 def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, w=8, plot=False):
     if 'area_ratio' in events: pass
-    else: events.insert(1, 'area_ratio', np.divide(events['cs2_a'],events['cs1_a']))
+    #else: events.insert(1, 'area_ratio', np.divide(events['cs2_a'],events['cs1_a']))
+    else: events.insert(1, 'area_ratio', np.divide(events['s2_a_area'],events['s1_a_area']))
     events = events[events['area_ratio']<1e3]
     
     # cathode drop-off
@@ -262,7 +263,7 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, w=8,
         plt.figure(figsize=(12,6))
         mh.plot(log_scale=True, cblabel='events')
         plt.xlabel("drift time ($\mu$s)", ha='right', x=1,fontsize=12)
-        plt.ylabel("cS2/cS1", ha='right', y=1,fontsize=12)
+        plt.ylabel("S2/S1", ha='right', y=1,fontsize=12)
         plt.title(f'run {run_id}',fontsize=14)
         plt.yscale('log')
         plt.xlim(1500,2500)
@@ -286,7 +287,7 @@ def drift_velocity_kr(events, run_id, low = 10, high = 3000, binning = 500, w=8,
         plt.figure(figsize=(12,6))
         mh_low.plot(log_scale=False, cblabel='events')
         plt.xlabel("drift time ($\mu$s)", ha='right', x=1,fontsize=12)
-        plt.ylabel("cS2/cS1", ha='right', y=1,fontsize=12)
+        plt.ylabel("S2/S1", ha='right', y=1,fontsize=12)
         plt.title(f'run {run_id}',fontsize=14)
         median.plot(label='median')
         plt.plot(dtsc,mfilt,label='filtered median')
