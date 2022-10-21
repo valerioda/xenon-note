@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from multihist import Hist1d, Histdd
-from tqdm.notebook import tqdm
+#from tqdm.notebook import tqdm
 import pandas as pd
 from scipy import stats
 
@@ -811,3 +811,35 @@ def plot_s2width_dt_kr(events, title, width='50p',tlim = (0,2400), wlim = (100,1
     plt.title(f'{title}',fontsize=14)
     if name is not None:  plt.savefig(name+'_area_width_'+width+'.png',dpi=600)
     #plt.legend(fontsize=14)
+
+def mask_S2Width_vs_pos_kr(events, title = 'Kr83m', mod_par = (44.04,0.673,3.2),
+                        wrange = (0,15), nrange = (0,10),angledeg = 30, xrange = (-60,60),
+                        xcut = (10,17.5), bins = 300, plot = False):  
+    s2width = events['s2_a_range_50p_area']
+    drift = events['drift_time']/1e3
+    s2area = events['s2_a_area']
+    
+    D_mod = mod_par[0]*1e3 * units.cm**2 / units.s
+    vd_mod = mod_par[1] * units.mm / units.us
+    tG_mod = mod_par[2] * units.ns
+    normWidth = s2_width_norm(s2width,s2_width_model(drift, D_mod, vd_mod, tG_mod))
+    xspace = np.linspace(xrange[0], xrange[1], bins)
+    wspace = np.linspace(wrange[0], wrange[1], bins)
+    nspace = np.linspace(nrange[0], nrange[1], bins)
+
+    angle = math.radians(angledeg)
+    nx = math.cos(angle) * events['s2_a_x_mlp'] - math.sin(angle) * events['s2_a_y_mlp']
+    ny = math.sin(angle) * events['s2_a_x_mlp'] + math.cos(angle) * events['s2_a_y_mlp']
+    phxy = Histdd(nx, ny, bins=(xspace, xspace))
+    phw = Histdd(nx, s2width/1e3, bins=(xspace, wspace))
+    phx = Histdd(nx, normWidth, bins=(xspace, nspace))
+    phy = Histdd(ny, normWidth, bins=(xspace, nspace))
+    
+    cut1, cut2 = np.ones(len(events), dtype=bool), np.ones(len(events), dtype=bool)
+    cut1 = nx > xcut[0]
+    cut1 &= nx < xcut[1]
+    cut2 = nx < -xcut[0]
+    cut2 &= nx > -xcut[1]
+    cutnw = cut1 | cut2
+    cutfw = np.logical_not(cutnw)
+    return cutfw, cutnw
