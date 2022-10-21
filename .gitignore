@@ -1,2 +1,4 @@
 */strax_data/
 fast_response_analysis/data/
+*/.ipynb_checkpoints/
+*/__pycache__/
